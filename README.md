@@ -1,7 +1,4 @@
-# Cortex AI — Multi-Agent AI Platform
-
-<img width="1536" height="1024" alt="Agentic" src="https://github.com/user-attachments/assets/5f013e8b-5fdb-4827-ae08-f851fcc93a3c" />
-
+# Vertex AI — Multi-Agent AI Platform
 
 <p align="center">
   <strong>An intelligent multi-agent workspace for chat, search, coding, and document-based AI workflows.</strong>
