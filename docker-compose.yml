@@ -1,9 +1,243 @@
 version: "3.9"
+
 services:
+  # ── 1. Databases & Infrastructure ─────────────────────────────
+  mongodb:
+    image: mongo:7.0
+    container_name: cortex-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - cortex-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: cortex-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - cortex-net
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: cortex-qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant-data:/qdrant/storage
+    networks:
+      - cortex-net
+
+  minio:
+    image: minio/minio:latest
+    container_name: cortex-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    networks:
+      - cortex-net
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: cortex-minio-init
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      sleep 2;
+      /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin;
+      /usr/bin/mc mb myminio/agent-files --ignore-existing;
+      /usr/bin/mc anonymous set download myminio/agent-files;
+      exit 0;
+      "
+    networks:
+      - cortex-net
+
+  # ── 2. LiteLLM Unified Gateway ─────────────────────────────────
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    container_name: cortex-litellm
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./litellm/config.yaml:/app/config.yaml
+    environment:
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY:-sk-cortex-litellm-master-key}
+    command: ["--config", "/app/config.yaml", "--port", "4000", "--num_workers", "1"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - cortex-net
+
+  # ── 3. Node.js Backend Microservices ──────────────────────────
+  auth:
+    build:
+      context: ./backend
+      dockerfile: ./services/auth/Dockerfile
+    container_name: cortex-auth
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    env_file:
+      - ./backend/services/auth/.env
+    environment:
+      - PORT=8001
+      - MONGODB_URI=mongodb://mongodb:27017/cortex_ai
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - cortex-net
+
+  chat:
+    build:
+      context: ./backend
+      dockerfile: ./services/chat/Dockerfile
+    container_name: cortex-chat
+    restart: unless-stopped
+    ports:
+      - "8002:8002"
+    env_file:
+      - ./backend/services/chat/.env
+    environment:
+      - PORT=8002
+      - MONGODB_URI=mongodb://mongodb:27017/cortex_ai
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - cortex-net
+
+  billing:
+    build:
+      context: ./backend
+      dockerfile: ./services/billing/Dockerfile
+    container_name: cortex-billing
+    restart: unless-stopped
+    ports:
+      - "8004:8004"
+    env_file:
+      - ./backend/services/billing/.env
+    environment:
+      - PORT=8004
+      - MONGODB_URI=mongodb://mongodb:27017/cortex_ai
+      - REDIS_URL=redis://redis:6379
+      - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID:-rzp_test_placeholder}
+      - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET:-rzp_secret_placeholder}
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - cortex-net
+
+  # ── 4. Python AI Service (FastAPI + LangGraph) ─────────────────
   agent:
-    build: ./backend/services/agent
-    env_file: ./backend/services/agent/.env
+    build:
+      context: ./backend/services/agent
+      dockerfile: Dockerfile
+    container_name: cortex-agent
+    restart: unless-stopped
+    ports:
+      - "8003:8003"
+    env_file:
+      - ./backend/services/agent/.env
+    environment:
+      - PORT=8003
+      - LITELLM_URL=http://litellm:4000
+      - LITELLM_API_KEY=${LITELLM_MASTER_KEY:-sk-cortex-litellm-master-key}
+      - USE_LITELLM=true
+      - OLLAMA_HOST=http://host.docker.internal:11434
+      - REDIS_URL=redis://redis:6379
+      - MONGODB_URI=mongodb://mongodb:27017/cortex_ai
+      - AUTH_SERVICE=http://auth:8001
+      - CHAT_SERVICE=http://chat:8002
+      - MINIO_ENDPOINT=http://minio:9000
+      - AWS_ACCESS_KEY_ID=minioadmin
+      - AWS_SECRET_KEY=minioadmin
+      - AWS_BUCKET_NAME=agent-files
+      - QDRANT_URL=http://qdrant:6333
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - TAVILY_API_KEY=${TAVILY_API_KEY:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - litellm
+      - redis
+      - qdrant
+      - minio
+    networks:
+      - cortex-net
+
+  # ── 5. Gateway (Reverse Proxy / API Router) ────────────────────
+  gateway:
+    build:
+      context: ./backend
+      dockerfile: ./gateway/Dockerfile
+    container_name: cortex-gateway
+    restart: unless-stopped
     ports:
       - "8000:8000"
-    restart: unless-stopped
+    env_file:
+      - ./backend/gateway/.env
+    environment:
+      - PORT=8000
+      - FRONTEND_URL=http://localhost:5173
+      - AUTH_SERVICE=http://auth:8001
+      - CHAT_SERVICE=http://chat:8002
+      - AGENT_SERVICE=http://agent:8003
+      - BILLING_SERVICE=http://billing:8004
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+      - auth
+      - chat
+      - billing
+      - agent
+    networks:
+      - cortex-net
 
+  # ── 6. Frontend (React + Vite + Tailwind + Beacon UI) ──────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cortex-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_SERVER_URL=http://localhost:8000
+    depends_on:
+      - gateway
+    networks:
+      - cortex-net
+
+networks:
+  cortex-net:
+    driver: bridge
+
+volumes:
+  mongo-data:
+  redis-data:
+  qdrant-data:
+  minio-data:

@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
     gcc \
     libfreetype6-dev \
     libffi-dev \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
@@ -17,7 +18,6 @@ COPY . .
 # Temp directory for file uploads
 RUN mkdir -p temp
 
-EXPOSE 8000
+EXPOSE 8003
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
-
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8003"]

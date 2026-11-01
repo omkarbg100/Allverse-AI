@@ -17,6 +17,8 @@ def get_s3():
             aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
             aws_secret_access_key=settings.AWS_SECRET_KEY,
         )
+        if settings.MINIO_ENDPOINT:
+            kwargs["endpoint_url"] = settings.MINIO_ENDPOINT
         _s3_client = boto3.client("s3", **kwargs)
     return _s3_client
 

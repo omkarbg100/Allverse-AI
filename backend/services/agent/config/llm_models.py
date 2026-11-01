@@ -1,5 +1,6 @@
 """
-LLM Model Factory — Ollama primary, Groq fallback.
+LLM Model Factory — LiteLLM proxy primary (unified gateway to local Ollama & Groq),
+with direct Ollama and Groq fallbacks.
 
 Usage:
     llm = get_model("chat")
@@ -7,6 +8,7 @@ Usage:
 """
 
 import logging
+import httpx
 from langchain_ollama import ChatOllama
 from langchain_groq import ChatGroq
 from .settings import settings
@@ -42,6 +44,23 @@ GROQ_MODEL_MAP: dict[str, str] = {
 }
 
 
+def _build_litellm(agent: str):
+    """LiteLLM exposes standard OpenAI-compatible completions API."""
+    model = OLLAMA_MODEL_MAP.get(agent, settings.OLLAMA_CHAT_MODEL)
+    try:
+        from langchain_openai import ChatOpenAI
+    except ImportError:
+        from langchain_community.chat_models import ChatOpenAI
+
+    return ChatOpenAI(
+        model=model,
+        base_url=f"{settings.LITELLM_URL}/v1",
+        api_key=settings.LITELLM_API_KEY or "sk-cortex-litellm-master-key",
+        temperature=0.7,
+        max_tokens=4096,
+    )
+
+
 def _build_ollama(agent: str):
     model = OLLAMA_MODEL_MAP.get(agent, settings.OLLAMA_CHAT_MODEL)
     return ChatOllama(
@@ -66,18 +85,35 @@ def _build_groq(agent: str):
 
 def get_model(agent: str):
     """
-    Returns a LangChain chat model.
-    Tries Ollama first; falls back to Groq if Ollama is unavailable.
+    Returns a LangChain chat model:
+      1. Tries LiteLLM unified gateway first (routes to Ollama / Groq / custom providers)
+      2. Falls back to direct Ollama on host
+      3. Falls back to Groq if Ollama is unavailable
     """
+    # 1. Try LiteLLM gateway if configured
+    if settings.USE_LITELLM and settings.LITELLM_URL:
+        try:
+            resp = httpx.get(f"{settings.LITELLM_URL}/health/readiness", timeout=2)
+            if resp.status_code == 200:
+                logger.debug("Using LiteLLM gateway for agent=%s", agent)
+                return _build_litellm(agent)
+        except Exception:
+            try:
+                # Some versions respond at /health
+                resp = httpx.get(f"{settings.LITELLM_URL}/health", timeout=2)
+                if resp.status_code == 200:
+                    logger.debug("Using LiteLLM gateway for agent=%s", agent)
+                    return _build_litellm(agent)
+            except Exception:
+                pass
+
+    # 2. Try direct Ollama
     try:
         llm = _build_ollama(agent)
-        # Quick connectivity check — Ollama responds to /api/tags
-        import httpx
         resp = httpx.get(f"{settings.OLLAMA_HOST}/api/tags", timeout=3)
         resp.raise_for_status()
-        logger.debug("Using Ollama for agent=%s model=%s", agent, OLLAMA_MODEL_MAP.get(agent))
+        logger.debug("Using direct Ollama for agent=%s model=%s", agent, OLLAMA_MODEL_MAP.get(agent))
         return llm
     except Exception as e:
         logger.warning("Ollama unavailable (%s), falling back to Groq for agent=%s", e, agent)
         return _build_groq(agent)
-
