@@ -1,9 +1,7 @@
-version: "3.9"
-
 services:
   # ── 1. Databases & Infrastructure ─────────────────────────────
   mongodb:
-    image: mongo:7.0
+    image: mongo:7
     container_name: cortex-mongodb
     restart: unless-stopped
     ports:
@@ -35,35 +33,14 @@ services:
     networks:
       - cortex-net
 
-  minio:
-    image: minio/minio:latest
-    container_name: cortex-minio
+  s3mock:
+    image: adobe/s3mock:latest
+    container_name: cortex-s3
     restart: unless-stopped
-    command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      initialBuckets: agent-files
     ports:
-      - "9000:9000"
-      - "9001:9001"
-    volumes:
-      - minio-data:/data
-    networks:
-      - cortex-net
-
-  minio-init:
-    image: minio/mc:latest
-    container_name: cortex-minio-init
-    depends_on:
-      - minio
-    entrypoint: >
-      /bin/sh -c "
-      sleep 2;
-      /usr/bin/mc alias set myminio http://minio:9000 minioadmin minioadmin;
-      /usr/bin/mc mb myminio/agent-files --ignore-existing;
-      /usr/bin/mc anonymous set download myminio/agent-files;
-      exit 0;
-      "
+      - "9000:9090"
     networks:
       - cortex-net
 
@@ -171,7 +148,7 @@ services:
       - MONGODB_URI=mongodb://mongodb:27017/cortex_ai
       - AUTH_SERVICE=http://auth:8001
       - CHAT_SERVICE=http://chat:8002
-      - MINIO_ENDPOINT=http://minio:9000
+      - MINIO_ENDPOINT=http://s3mock:9090
       - AWS_ACCESS_KEY_ID=minioadmin
       - AWS_SECRET_KEY=minioadmin
       - AWS_BUCKET_NAME=agent-files
@@ -184,7 +161,7 @@ services:
       - litellm
       - redis
       - qdrant
-      - minio
+      - s3mock
     networks:
       - cortex-net
 
@@ -240,4 +217,3 @@ volumes:
   mongo-data:
   redis-data:
   qdrant-data:
-  minio-data:
