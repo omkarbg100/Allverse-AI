@@ -1,0 +1,83 @@
+model_list:
+  # ── Ollama Models Running Locally on Windows Host ──────────────────
+  - model_name: llama3.2
+    litellm_params:
+      model: ollama/llama3.2
+      api_base: http://host.docker.internal:11434
+
+  - model_name: llama3:8b
+    litellm_params:
+      model: ollama/llama3:8b
+      api_base: http://host.docker.internal:11434
+
+  - model_name: deepseek-coder-v2:16b
+    litellm_params:
+      model: ollama/deepseek-coder-v2:16b
+      api_base: http://host.docker.internal:11434
+
+  - model_name: codellama:7b
+    litellm_params:
+      model: ollama/codellama:7b
+      api_base: http://host.docker.internal:11434
+
+  - model_name: llava:13b
+    litellm_params:
+      model: ollama/llava:13b
+      api_base: http://host.docker.internal:11434
+
+  - model_name: nomic-embed-text
+    litellm_params:
+      model: ollama/nomic-embed-text
+      api_base: http://host.docker.internal:11434
+
+  # ── Cloud Fallback Provider: Groq ──────────────────────────────────
+  - model_name: groq-chat
+    litellm_params:
+      model: groq/llama-3.3-70b-versatile
+      api_key: os.environ/GROQ_API_KEY
+
+  - model_name: groq-vision
+    litellm_params:
+      model: groq/llama-3.2-90b-vision-preview
+      api_key: os.environ/GROQ_API_KEY
+
+  # ── Generic Aliases (Ollama Primary with Groq Fallback) ────────────
+  - model_name: cortex-chat
+    litellm_params:
+      model: ollama/llama3.2
+      api_base: http://host.docker.internal:11434
+
+  - model_name: cortex-chat
+    litellm_params:
+      model: groq/llama-3.3-70b-versatile
+      api_key: os.environ/GROQ_API_KEY
+
+  - model_name: cortex-coding
+    litellm_params:
+      model: ollama/deepseek-coder-v2:16b
+      api_base: http://host.docker.internal:11434
+
+  - model_name: cortex-coding
+    litellm_params:
+      model: groq/llama-3.3-70b-versatile
+      api_key: os.environ/GROQ_API_KEY
+
+  - model_name: cortex-vision
+    litellm_params:
+      model: ollama/llava:13b
+      api_base: http://host.docker.internal:11434
+
+  - model_name: cortex-vision
+    litellm_params:
+      model: groq/llama-3.2-90b-vision-preview
+      api_key: os.environ/GROQ_API_KEY
+
+router_settings:
+  routing_strategy: "latency-based-routing"
+  fallbacks:
+    - cortex-chat: ["groq-chat"]
+    - cortex-coding: ["groq-chat"]
+    - cortex-vision: ["groq-vision"]
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
