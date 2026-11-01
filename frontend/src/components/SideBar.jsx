@@ -97,7 +97,7 @@ function SideBar() {
     return (
         <>
          
-       <button className='lg:hidden fixed top-3.5 left-4 z-50 flex items-center justify-center w-8 h-8 rounded-lg bg-[#0d0f14] border border-white/[0.06] text-slate-400 hover:text-slate-200 transition-colors duration-150 cursor-pointer' onClick={()=>setMobileOpen(true)}>
+       <button className='lg:hidden fixed top-3.5 left-4 z-50 flex items-center justify-center w-8 h-8 rounded-lg bg-gray-900 border border-gray-700 text-gray-300 hover:text-white transition-colors duration-150 cursor-pointer' onClick={()=>setMobileOpen(true)}>
             <Menu size={14}/>
          </button>
 
