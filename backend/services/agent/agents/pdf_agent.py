@@ -4,7 +4,6 @@ PDF Agent — mirrors agents/pdf.agent.js.
 Flow: LLM returns JSON structure → reportlab builds PDF → upload to S3 → presigned URL
 """
 
-import json
 import logging
 import time
 
@@ -12,6 +11,7 @@ from config.llm_models import get_model
 from config.rate_limit import check_rate_limit
 from utils.deduct_credits import deduct_credits
 from utils.generate_pdf import generate_pdf
+from utils.json_response import invoke_json
 from utils.upload_to_s3 import upload_to_s3
 from utils.get_from_s3 import get_from_s3
 from graph.state import AgentState
@@ -44,16 +44,13 @@ async def pdf_agent(state: AgentState) -> AgentState:
         await check_rate_limit(state["user_id"], "pdf")
 
         llm = get_model("pdf")
-        res = await llm.ainvoke(PDF_JSON_PROMPT + state["prompt"])
-
-        raw = res.content.strip()
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-            raw = raw.rsplit("```", 1)[0]
-
-        data = json.loads(raw.strip())
+        data = await invoke_json(
+            llm,
+            PDF_JSON_PROMPT + state["prompt"],
+            '{"title":"","subtitle":"","sections":[{"heading":"","points":[""]}]}',
+        )
+        if not isinstance(data.get("sections"), list):
+            data["sections"] = []
         await deduct_credits(state["user_id"], "pdf")
 
         pdf_bytes = generate_pdf(data)

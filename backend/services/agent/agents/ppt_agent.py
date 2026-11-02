@@ -4,7 +4,6 @@ PPT Agent — mirrors agents/ppt.agent.js.
 Flow: LLM returns JSON (title + 6 slides) → python-pptx builds PPTX → S3 → URL
 """
 
-import json
 import logging
 import time
 
@@ -12,6 +11,7 @@ from config.llm_models import get_model
 from config.rate_limit import check_rate_limit
 from utils.deduct_credits import deduct_credits
 from utils.generate_ppt import generate_ppt
+from utils.json_response import invoke_json
 from utils.upload_to_s3 import upload_to_s3
 from utils.get_from_s3 import get_from_s3
 from graph.state import AgentState
@@ -44,16 +44,13 @@ async def ppt_agent(state: AgentState) -> AgentState:
         await check_rate_limit(state["user_id"], "ppt")
 
         llm = get_model("ppt")
-        res = await llm.ainvoke(PPT_JSON_PROMPT + state["prompt"])
-
-        raw = res.content.strip()
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-            raw = raw.rsplit("```", 1)[0]
-
-        data = json.loads(raw.strip())
+        data = await invoke_json(
+            llm,
+            PPT_JSON_PROMPT + state["prompt"],
+            '{"title":"","subtitle":"","slides":[{"title":"","points":[""]}]}',
+        )
+        if not isinstance(data.get("slides"), list):
+            data["slides"] = []
         await deduct_credits(state["user_id"], "ppt")
 
         ppt_bytes = generate_ppt(data)

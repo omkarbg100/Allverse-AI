@@ -4,71 +4,84 @@ Router Node — mirrors graph/router.js.
 Priority:
   1. agent field explicitly set (not "auto") → use it directly
   2. File upload detected → route by MIME type
-  3. LLM classifies the user's text prompt → returns agent name
+  3. Deterministic keyword rules → route to a specialist agent
+  4. No strong signal → chat
+
+Routing is keyword-based because small local models are unreliable at returning
+single-word labels and tend to over-route ordinary questions to PDF/PPT.
 """
 
 import logging
-from config.llm_models import get_model
+import re
+
 from graph.state import AgentState
 
 logger = logging.getLogger(__name__)
 
-ROUTER_PROMPT = """You are an agent router.
+ROUTE_RULES: list[tuple[str, tuple[re.Pattern, ...]]] = [
+    (
+        "pdf",
+        (
+            re.compile(r"\bpdfs?\b"),
+            re.compile(
+                r"\b(?:create|generate|make|write|draft|prepare)\b"
+                r"[^\n]{0,80}\b(?:document|report)\b"
+            ),
+            re.compile(r"\bdownloadable\b"),
+        ),
+    ),
+    (
+        "ppt",
+        (
+            re.compile(r"\b(?:ppt|pptx?|powerpoint)\b"),
+            re.compile(r"\bpresentations?\b"),
+            re.compile(r"\bslides?\b"),
+            re.compile(r"\bdeck\b"),
+        ),
+    ),
+    (
+        "vision",
+        (
+            re.compile(r"\b(?:draw|sketch|illustrate)\b"),
+            re.compile(
+                r"\b(?:create|generate|make|design)\b"
+                r"[^\n]{0,60}\b(?:image|picture|illustration|logo|poster|artwork)\b"
+            ),
+            re.compile(r"\b(?:image|logo|poster) generation\b"),
+        ),
+    ),
+    (
+        "search",
+        (
+            re.compile(r"\b(?:latest|newest|news|current events?|today|recent|breaking)\b"),
+            re.compile(
+                r"\b(?:search (?:the )?(?:web|internet)|web search|"
+                r"look (?:it|this|that)? ?up|google)\b"
+            ),
+            re.compile(r"\bweather\b"),
+        ),
+    ),
+    (
+        "coding",
+        (
+            re.compile(r"\b(?:debug|compile|syntax error|stack trace)\b"),
+            re.compile(
+                r"\b(?:write|generate|create|build|fix|debug|refactor|optimize|review)\b"
+                r"[^\n]{0,60}\b(?:code|function|component|script|program|app|"
+                r"website|api|architecture|database schema)\b"
+            ),
+            re.compile(r"\b(?:html|css|javascript|typescript|python|react|node\.?js|sql)\b"),
+        ),
+    ),
+]
 
-Available agents:
 
-- chat
-- search
-- coding
-- pdf
-- ppt
-- vision
-
-Rules:
-
-chat:
-General conversation,
-explanations,
-learning,
-questions.
-
-search:
-Current events,
-latest information,
-news,
-recent developments,
-internet lookup.
-
-coding:
-Generate code,
-debug code,
-build projects,
-architecture,
-API design.
-
-pdf:
-Questions about generating PDFs
-or document context.
-
-ppt:
-Questions about generating PPTs
-or presentation context.
-
-vision:
-Generate image,
-create image.
-
-Return ONLY one word:
-
-chat
-search
-coding
-pdf
-ppt
-vision
-
-User Query:
-"""
+def classify_prompt(prompt: str) -> str:
+    text = prompt.lower().strip()
+    for agent, patterns in ROUTE_RULES:
+        if any(pattern.search(text) for pattern in patterns):
+            return agent
+    return "chat"
 
 
 async def router_node(state: AgentState) -> AgentState:
@@ -84,16 +97,8 @@ async def router_node(state: AgentState) -> AgentState:
         if mime.startswith("image/"):
             return {**state, "agent": "image_analyzer"}
 
-    # 3. LLM-based intent classification
-    llm = get_model("router")
-    response = await llm.ainvoke(ROUTER_PROMPT + state["prompt"])
-    agent = response.content.strip().lower()
-
-    # Guard: only allow known agents
-    valid = {"chat", "search", "coding", "pdf", "ppt", "vision"}
-    if agent not in valid:
-        agent = "chat"
+    # 3. Deterministic keyword classification
+    agent = classify_prompt(state["prompt"])
 
     logger.info("router_node → %s", agent)
     return {**state, "agent": agent}
-
