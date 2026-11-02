@@ -12,6 +12,7 @@ import Artifact from '../components/Artifact';
 function Home() {
     const {userData}=useSelector(state=>state.user)
     const dispatch=useDispatch()
+    const allowDevLogin = import.meta.env.VITE_ALLOW_DEV_LOGIN === "true"
     const handleLogin = async (token) => {
         try {
             const { data } = await api.post("/api/auth/login", { token })
@@ -23,6 +24,10 @@ function Home() {
 
 
     const googleLogin = async () => {
+        if (!auth) {
+            await handleLogin("dev-login")
+            return
+        }
         const data = await signInWithPopup(auth, googleProvider)
         const token = await data.user.getIdToken()
         console.log(token)
@@ -46,10 +51,11 @@ function Home() {
                         <p className='text-[13px] text-slate-500'>Please login to continue using the app.</p>
                     </div>
 
-                    <button className='w-full flex items-center justify-center gap-3 py-[11px] rounded-xl text-sm font-medium text-black/90 bg-white hover:bg-gray-200  transition-all duration-150 cursor-pointer' onClick={googleLogin}>
+                    <button className='w-full flex items-center justify-center gap-3 py-[11px] rounded-xl text-sm font-medium text-black/90 bg-white hover:bg-gray-200  transition-all duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed' onClick={googleLogin} disabled={!auth && !allowDevLogin}>
                         <FcGoogle size={15} />
-                        Continue With Google
+                        {auth ? "Continue With Google" : allowDevLogin ? "Continue as Demo User" : "Firebase not configured"}
                     </button>
+                    {!auth && allowDevLogin && <p className='text-[11px] text-slate-600 text-center'>Firebase is not configured. Using local demo login.</p>}
                 </div>
             </div>}
           

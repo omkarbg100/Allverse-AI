@@ -14,7 +14,17 @@ const firebaseConfig = {
   appId: "1:428104212065:web:7948e58a8bb47cda0d1420"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig)
-export const auth=getAuth(app)
-export const googleProvider=new GoogleAuthProvider()
+// Firebase is optional for local development. When no web API key is
+// configured, the app falls back to the local demo login instead of
+// crashing on startup.
+let app = null
+let auth = null
+let googleProvider = null
+
+if (firebaseConfig.apiKey) {
+  app = initializeApp(firebaseConfig)
+  auth = getAuth(app)
+  googleProvider = new GoogleAuthProvider()
+}
+
+export { app, auth, googleProvider }

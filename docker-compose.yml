@@ -79,6 +79,7 @@ services:
       - PORT=8001
       - MONGODB_URI=mongodb://mongodb:27017/cortex_ai
       - REDIS_URL=redis://redis:6379
+      - ALLOW_DEV_LOGIN=${ALLOW_DEV_LOGIN:-false}
     depends_on:
       - mongodb
       - redis
@@ -204,6 +205,8 @@ services:
       - "5173:5173"
     environment:
       - VITE_SERVER_URL=http://localhost:8000
+      - VITE_ALLOW_DEV_LOGIN=${ALLOW_DEV_LOGIN:-false}
+      - VITE_FIREBASE_API_KEY=${VITE_FIREBASE_API_KEY:-}
     depends_on:
       - gateway
     networks:

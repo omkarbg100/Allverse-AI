@@ -1,5 +1,5 @@
 import { getAuth } from "firebase-admin/auth"
-import { app } from "../config/firebase.js"
+import { app, firebaseEnabled } from "../config/firebase.js"
 import User from "../models/user.model.js"
 import { createConnection } from "mongoose"
 import redis from "../../../shared/redis/redis.js"
@@ -7,7 +7,25 @@ import redis from "../../../shared/redis/redis.js"
 export const login = async (req, res) => {
     try {
         const { token } = req.body
-        const decoded = await getAuth(app).verifyIdToken(token)
+        const allowDevLogin = process.env.ALLOW_DEV_LOGIN === "true"
+
+        let decoded
+        if (allowDevLogin && token === "dev-login") {
+            decoded = {
+                uid: "dev-user",
+                name: "Dev User",
+                email: "dev@example.com",
+                picture: ""
+            }
+        } else {
+            if (!firebaseEnabled) {
+                return res.status(503).json({
+                    message: "Firebase is not configured. Add a valid serviceAccountKey.json or enable ALLOW_DEV_LOGIN for local development."
+                })
+            }
+            decoded = await getAuth(app).verifyIdToken(token)
+        }
+
         let user = await User.findOne({
             firebaseUid: decoded.uid
         })

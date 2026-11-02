@@ -1,8 +1,8 @@
 model_list:
   # ── Ollama Models Running Locally on Windows Host ──────────────────
-  - model_name: llama3.2
+  - model_name: llama3.2:3b
     litellm_params:
-      model: ollama/llama3.2
+      model: ollama/llama3.2:3b
       api_base: http://host.docker.internal:11434
 
   - model_name: llama3:8b
@@ -44,7 +44,7 @@ model_list:
   # ── Generic Aliases (Ollama Primary with Groq Fallback) ────────────
   - model_name: cortex-chat
     litellm_params:
-      model: ollama/llama3.2
+      model: ollama/llama3.2:3b
       api_base: http://host.docker.internal:11434
 
   - model_name: cortex-chat

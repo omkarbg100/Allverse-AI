@@ -463,13 +463,20 @@ Do not commit environment files or API credentials to the repository.
 
 # 🐳 Run with Docker
 
-For multi-service local development, Docker Compose can be used to start the backend infrastructure.
+For local development, the root `docker-compose.yml` starts the full stack (frontend, gateway, microservices, databases, LiteLLM, and S3 mock).
 
 ```bash
-cd backend
-
-docker compose up --build
+docker compose up -d --build
 ```
+
+Services will be available at:
+
+- Frontend: `http://localhost:5173`
+- API Gateway: `http://localhost:8000`
+- LiteLLM: `http://localhost:4001`
+- Qdrant dashboard: `http://localhost:6333/dashboard`
+
+If Firebase credentials are not configured, `ALLOW_DEV_LOGIN=true` in `.env` enables the **Continue as Demo User** button for local development.
 
 To stop the services:
 
@@ -490,7 +497,7 @@ npm run dev
 The frontend will be available at:
 
 ```text
-http://localhost:3000
+http://localhost:5173
 ```
 
 ---

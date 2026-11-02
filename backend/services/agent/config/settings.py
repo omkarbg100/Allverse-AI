@@ -18,7 +18,7 @@ class Settings(BaseSettings):
 
     # ── Ollama ──────────────────────────────────────────────────
     OLLAMA_HOST: str = "http://host.docker.internal:11434"
-    OLLAMA_CHAT_MODEL: str = "llama3.2"
+    OLLAMA_CHAT_MODEL: str = "llama3.2:3b"
     OLLAMA_CODING_MODEL: str = "deepseek-coder-v2:16b"
     OLLAMA_VISION_MODEL: str = "llava:13b"
     OLLAMA_EMBED_MODEL: str = "nomic-embed-text"
