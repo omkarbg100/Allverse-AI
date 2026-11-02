@@ -1,12 +1,123 @@
+import crypto from "crypto"
 import { getAuth } from "firebase-admin/auth"
 import { app, firebaseEnabled } from "../config/firebase.js"
 import User from "../models/user.model.js"
-import { createConnection } from "mongoose"
 import redis from "../../../shared/redis/redis.js"
+
+const SESSION_TTL = 7 * 24 * 60 * 60
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+const normalizeEmail = (email) => String(email || "").trim().toLowerCase()
+
+const publicUser = (user) => {
+    const data = user.toObject ? user.toObject() : { ...user }
+    delete data.passwordHash
+    return data
+}
+
+const hashPassword = (password) => {
+    const salt = crypto.randomBytes(16).toString("hex")
+    const hash = crypto.scryptSync(password, salt, 64).toString("hex")
+    return `scrypt$${salt}$${hash}`
+}
+
+const verifyPassword = (password, storedHash) => {
+    try {
+        const [scheme, salt, hash] = String(storedHash).split("$")
+        if (scheme !== "scrypt" || !salt || !hash) return false
+        const derived = crypto.scryptSync(password, salt, 64)
+        const expected = Buffer.from(hash, "hex")
+        return derived.length === expected.length && crypto.timingSafeEqual(derived, expected)
+    } catch {
+        return false
+    }
+}
+
+const createSession = async (user, res) => {
+    const sessionId = crypto.randomUUID()
+    const session = {
+        userId: user._id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar,
+        plan: user.plan,
+        credits: user.credits,
+        totalCredits: user.totalCredits,
+        planExpiresAt: user.planExpiresAt
+    }
+
+    await redis.set(`user-session-${user._id}`, sessionId, "EX", SESSION_TTL)
+    await redis.set(`session-${sessionId}`, JSON.stringify(session), "EX", SESSION_TTL)
+
+    res.cookie("session", sessionId, {
+        httpOnly: true,
+        secure: false,
+        sameSite: "strict",
+        maxAge: SESSION_TTL * 1000
+    })
+
+    return res.status(200).json(publicUser(user))
+}
+
+export const register = async (req, res) => {
+    try {
+        const { name, email, password } = req.body || {}
+        const normalizedEmail = normalizeEmail(email)
+        const normalizedName = String(name || "").trim()
+
+        if (normalizedName.length < 2 || normalizedName.length > 80) {
+            return res.status(400).json({ message: "Please enter a valid name." })
+        }
+        if (!EMAIL_PATTERN.test(normalizedEmail)) {
+            return res.status(400).json({ message: "Please enter a valid email address." })
+        }
+        if (typeof password !== "string" || password.length < 8 || password.length > 128) {
+            return res.status(400).json({ message: "Password must be between 8 and 128 characters." })
+        }
+
+        const existingUser = await User.findOne({ email: normalizedEmail })
+        if (existingUser) {
+            return res.status(409).json({ message: "An account with this email already exists." })
+        }
+
+        const user = await User.create({
+            firebaseUid: `local:${crypto.randomUUID()}`,
+            name: normalizedName,
+            email: normalizedEmail,
+            avatar: "",
+            passwordHash: hashPassword(password)
+        })
+
+        return await createSession(user, res)
+    } catch (error) {
+        if (error?.code === 11000) {
+            return res.status(409).json({ message: "An account with this email already exists." })
+        }
+        return res.status(500).json({ message: `registration error ${error}` })
+    }
+}
 
 export const login = async (req, res) => {
     try {
-        const { token } = req.body
+        const { token, email, password } = req.body || {}
+
+        if (email || password) {
+            if (!email || typeof password !== "string") {
+                return res.status(400).json({ message: "Email and password are required." })
+            }
+
+            const user = await User.findOne({ email: normalizeEmail(email) }).select("+passwordHash")
+            if (!user || !user.passwordHash || !verifyPassword(password, user.passwordHash)) {
+                return res.status(401).json({ message: "Invalid email or password." })
+            }
+
+            return await createSession(user, res)
+        }
+
+        if (!token) {
+            return res.status(400).json({ message: "A Firebase token or email and password are required." })
+        }
+
         const allowDevLogin = process.env.ALLOW_DEV_LOGIN === "true"
 
         let decoded
@@ -26,9 +137,7 @@ export const login = async (req, res) => {
             decoded = await getAuth(app).verifyIdToken(token)
         }
 
-        let user = await User.findOne({
-            firebaseUid: decoded.uid
-        })
+        let user = await User.findOne({ firebaseUid: decoded.uid })
 
         if (!user) {
             user = await User.create({
@@ -39,33 +148,7 @@ export const login = async (req, res) => {
             })
         }
 
-        const sessionId = crypto.randomUUID()
-        await redis.set(`user-session-${user?._id}`,
-            sessionId
-            , "EX", 7 * 24 * 60 * 60)
-        await redis.set(`session-${sessionId}`, JSON.stringify({
-            userId: user._id,
-            name: user.name,
-            email: user.email,
-            avatar: user.avatar,
-            plan: user.plan,
-            credits: user.credits,
-            totalCredits: user.totalCredits,
-            planExpiresAt: user.planExpiresAt
-        }), "EX", 7 * 24 * 60 * 60)
-
-
-
-
-        res.cookie("session", sessionId, {
-            httpOnly: true,
-            secure: false,
-            sameSite: "strict",
-            maxAge: 7 * 24 * 60 * 60 * 1000
-        })
-
-        return res.status(200).json(user)
-
+        return await createSession(user, res)
     } catch (error) {
         return res.status(500).json({ message: `login error ${error}` })
     }
