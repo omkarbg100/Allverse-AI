@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     # ── Ollama ──────────────────────────────────────────────────
     OLLAMA_HOST: str = "http://host.docker.internal:11434"
     OLLAMA_CHAT_MODEL: str = "llama3.2:3b"
-    OLLAMA_CODING_MODEL: str = "deepseek-coder-v2:16b"
+    OLLAMA_CODING_MODEL: str = "llama3.2:3b"
     OLLAMA_VISION_MODEL: str = "llava:13b"
     OLLAMA_EMBED_MODEL: str = "nomic-embed-text"
 
@@ -44,6 +44,7 @@ class Settings(BaseSettings):
     AWS_BUCKET_NAME: str = "agent-files"
     AWS_REGION: str = "us-east-1"
     MINIO_ENDPOINT: str = "http://minio:9000"
+    S3_PUBLIC_ENDPOINT: str = "http://localhost:9000"
 
     # ── Qdrant ──────────────────────────────────────────────────
     QDRANT_URL: str = "http://qdrant:6333"

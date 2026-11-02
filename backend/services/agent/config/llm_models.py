@@ -30,6 +30,13 @@ OLLAMA_MODEL_MAP: dict[str, str] = {
     "image":          settings.OLLAMA_CHAT_MODEL,
 }
 
+STRUCTURED_AGENTS = {"intent", "coding", "pdf", "ppt"}
+
+
+def _temperature(agent: str) -> float:
+    return 0.2 if agent in STRUCTURED_AGENTS else 0.7
+
+
 GROQ_MODEL_MAP: dict[str, str] = {
     "router":         settings.GROQ_CHAT_MODEL,
     "chat":           settings.GROQ_CHAT_MODEL,
@@ -56,7 +63,7 @@ def _build_litellm(agent: str):
         model=model,
         base_url=f"{settings.LITELLM_URL}/v1",
         api_key=settings.LITELLM_API_KEY or "sk-allverse-litellm-master-key",
-        temperature=0.7,
+        temperature=_temperature(agent),
         max_tokens=4096,
     )
 
@@ -66,7 +73,7 @@ def _build_ollama(agent: str):
     return ChatOllama(
         model=model,
         base_url=settings.OLLAMA_HOST,
-        temperature=0.7,
+        temperature=_temperature(agent),
         num_predict=4096,
     )
 
@@ -78,7 +85,7 @@ def _build_groq(agent: str):
     return ChatGroq(
         model=model,
         api_key=settings.GROQ_API_KEY,
-        temperature=0.7,
+        temperature=_temperature(agent),
         max_tokens=4096,
     )
 

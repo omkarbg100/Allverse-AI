@@ -54,7 +54,7 @@ model_list:
 
   - model_name: allverse-coding
     litellm_params:
-      model: ollama/deepseek-coder-v2:16b
+      model: ollama/llama3.2:3b
       api_base: http://host.docker.internal:11434
 
   - model_name: allverse-coding

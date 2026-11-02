@@ -8,13 +8,13 @@ Flow:
   2b. Everything else → return Markdown explanation
 """
 
-import json
 import logging
 import time
 
 from config.llm_models import get_model
 from config.rate_limit import check_rate_limit
 from utils.deduct_credits import deduct_credits
+from utils.json_response import invoke_json
 from graph.state import AgentState
 
 logger = logging.getLogger(__name__)
@@ -133,18 +133,11 @@ async def coding_agent(state: AgentState) -> AgentState:
         logger.info("coding_agent intent: %s", intent)
 
         if intent == "CODE_GENERATION":
-            res = await code_llm.ainvoke(CODE_GEN_PROMPT + state["prompt"])
-            logger.info("coding_agent raw output: %s", res.content[:200])
-
-            # Strip any accidental markdown fences
-            raw = res.content.strip()
-            if raw.startswith("```"):
-                raw = raw.split("```")[1]
-                if raw.startswith("json"):
-                    raw = raw[4:]
-                raw = raw.rsplit("```", 1)[0]
-
-            data = json.loads(raw.strip())
+            data = await invoke_json(
+                code_llm,
+                CODE_GEN_PROMPT + state["prompt"],
+                '{"files":[{"name":"index.html","content":""}]}',
+            )
             await deduct_credits(state["user_id"], "coding")
 
             return {

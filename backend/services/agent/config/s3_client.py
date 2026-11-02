@@ -7,18 +7,34 @@ import boto3
 from .settings import settings
 
 _s3_client = None
+_public_s3_client = None
+
+
+def _build_client(endpoint_url: str | None):
+    kwargs = dict(
+        region_name=settings.AWS_REGION,
+        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.AWS_SECRET_KEY,
+    )
+    if endpoint_url:
+        kwargs["endpoint_url"] = endpoint_url
+    return boto3.client("s3", **kwargs)
 
 
 def get_s3():
+    """Client for internal uploads/downloads (container-network endpoint)."""
     global _s3_client
     if _s3_client is None:
-        kwargs = dict(
-            region_name=settings.AWS_REGION,
-            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=settings.AWS_SECRET_KEY,
-        )
-        if settings.MINIO_ENDPOINT:
-            kwargs["endpoint_url"] = settings.MINIO_ENDPOINT
-        _s3_client = boto3.client("s3", **kwargs)
+        _s3_client = _build_client(settings.MINIO_ENDPOINT or None)
     return _s3_client
+
+
+def get_public_s3():
+    """Client used only for signing browser-facing presigned URLs."""
+    global _public_s3_client
+    if not settings.S3_PUBLIC_ENDPOINT:
+        return get_s3()
+    if _public_s3_client is None:
+        _public_s3_client = _build_client(settings.S3_PUBLIC_ENDPOINT)
+    return _public_s3_client
 

@@ -150,6 +150,7 @@ services:
       - AUTH_SERVICE=http://auth:8001
       - CHAT_SERVICE=http://chat:8002
       - MINIO_ENDPOINT=http://s3mock:9090
+      - S3_PUBLIC_ENDPOINT=http://localhost:9000
       - AWS_ACCESS_KEY_ID=minioadmin
       - AWS_SECRET_KEY=minioadmin
       - AWS_BUCKET_NAME=agent-files
