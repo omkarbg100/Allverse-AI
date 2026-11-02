@@ -78,11 +78,12 @@ The Coding Agent helps developers work with code using natural-language instruct
 
 ### 🔐 Authentication
 
-Secure authentication is implemented using Firebase Authentication and JWT.
+Secure authentication supports Firebase Google sign-in and email/password accounts in parallel.
 
-- User authentication
+- Email/password registration and login with scrypt password hashing
+- Firebase Google sign-in
 - Protected routes
-- JWT-based authorization
+- Session-based authorization with Redis
 - Secure service communication
 - Multi-user support
 
@@ -267,7 +268,11 @@ This enables conversations to maintain context across multiple requests and serv
 
 # 🔐 Authentication Flow
 
-Firebase Authentication handles user authentication while JWTs are used for secure authorization.
+Firebase Google sign-in and email/password login both create the same Redis-backed user session.
+
+- Email/password: `POST /api/auth/register` and `POST /api/auth/login`
+- Firebase: `POST /api/auth/login` with a Firebase ID token
+- Demo mode: `POST /api/auth/login` with `dev-login` when `ALLOW_DEV_LOGIN=true`
 
 ```text
 User
