@@ -51,12 +51,14 @@ async def pdf_agent(state: AgentState) -> AgentState:
         )
         if not isinstance(data.get("sections"), list):
             data["sections"] = []
-        await deduct_credits(state["user_id"], "pdf")
+        if not str(data.get("title", "")).strip():
+            data["title"] = state["prompt"][:80]
 
         pdf_bytes = generate_pdf(data)
         filename = f"pdf-{int(time.time() * 1000)}.pdf"
         await upload_to_s3(filename, pdf_bytes, "application/pdf")
         url = await get_from_s3(filename, expires_in=600)
+        await deduct_credits(state["user_id"], "pdf")
 
         return {
             **state,

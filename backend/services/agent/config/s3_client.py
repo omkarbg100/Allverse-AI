@@ -10,6 +10,11 @@ _s3_client = None
 _public_s3_client = None
 
 
+def _drop_expect_header(request, **kwargs):
+    # S3Mock closes the connection when botocore sends "Expect: 100-continue".
+    request.headers.pop("Expect", None)
+
+
 def _build_client(endpoint_url: str | None):
     kwargs = dict(
         region_name=settings.AWS_REGION,
@@ -18,7 +23,9 @@ def _build_client(endpoint_url: str | None):
     )
     if endpoint_url:
         kwargs["endpoint_url"] = endpoint_url
-    return boto3.client("s3", **kwargs)
+    client = boto3.client("s3", **kwargs)
+    client.meta.events.register("before-send.s3.PutObject", _drop_expect_header)
+    return client
 
 
 def get_s3():

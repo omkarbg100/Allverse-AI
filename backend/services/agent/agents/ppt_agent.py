@@ -51,7 +51,8 @@ async def ppt_agent(state: AgentState) -> AgentState:
         )
         if not isinstance(data.get("slides"), list):
             data["slides"] = []
-        await deduct_credits(state["user_id"], "ppt")
+        if not str(data.get("title", "")).strip():
+            data["title"] = state["prompt"][:80]
 
         ppt_bytes = generate_ppt(data)
         filename  = f"ppt-{int(time.time() * 1000)}.pptx"
@@ -61,6 +62,7 @@ async def ppt_agent(state: AgentState) -> AgentState:
         )
         await upload_to_s3(filename, ppt_bytes, content_type)
         url = await get_from_s3(filename, expires_in=600)
+        await deduct_credits(state["user_id"], "ppt")
 
         return {
             **state,
