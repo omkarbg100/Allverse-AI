@@ -1,5 +1,4 @@
 import { signInWithPopup } from 'firebase/auth'
-import React from 'react'
 import { auth, googleProvider } from '../../utils/firebase'
 import api from '../../utils/axios'
 import { FcGoogle } from "react-icons/fc";
@@ -9,7 +8,7 @@ import SideBar from '../components/SideBar';
 import ChatArea from '../components/ChatArea';
 import Artifact from '../components/Artifact';
 
-function Home() {
+function Home({ onHome }) {
     const {userData}=useSelector(state=>state.user)
     const dispatch=useDispatch()
     const allowDevLogin = import.meta.env.VITE_ALLOW_DEV_LOGIN === "true"
@@ -37,7 +36,7 @@ function Home() {
     return (
         <div className='h-screen  flex bg-[#0d0f14] text-white overflow-hidden'>
 
-<SideBar/>
+<SideBar onHome={onHome}/>
 <ChatArea/>
 <Artifact/>
 
@@ -56,6 +55,7 @@ function Home() {
                         {auth ? "Continue With Google" : allowDevLogin ? "Continue as Demo User" : "Firebase not configured"}
                     </button>
                     {!auth && allowDevLogin && <p className='text-[11px] text-slate-600 text-center'>Firebase is not configured. Using local demo login.</p>}
+                    {onHome && <button onClick={onHome} className='text-[11px] text-slate-600 hover:text-slate-300 transition-colors duration-150 cursor-pointer bg-transparent border-none'>Back to home</button>}
                 </div>
             </div>}
           

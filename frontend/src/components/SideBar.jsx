@@ -1,16 +1,14 @@
-import React from 'react'
-import { Coins, LogOut, Menu, MessageSquare, PanelLeftIcon, PanelRight, PenBoxIcon, PenSquare, Plus, User, X } from "lucide-react"
+import { Coins, Home as HomeIcon, LogOut, Menu, MessageSquare, PanelLeftIcon, PanelRight, PenSquare, Plus, User, X } from "lucide-react"
 import { useState } from 'react'
 import { useEffect } from 'react'
 import { getConversations } from '../features/getConversations'
 import { useDispatch, useSelector } from 'react-redux'
-import { addConversation, setConversations, setSelectedConversation } from '../redux/conversationSlice'
+import { setConversations, setSelectedConversation } from '../redux/conversationSlice'
 
-import { createConversation } from '../features/createConversation'
 import logOut from '../features/logOut'
 import { setUserdata } from '../redux/userSlice'
 import BillingDrawer from './BillingDrawer'
-function SideBar() {
+function SideBar({ onHome }) {
     const [collapsed, setCollapsed] = useState(false)
     const dispatch = useDispatch()
     const [imageError, setImageError] = useState(false)
@@ -24,14 +22,7 @@ function SideBar() {
             dispatch(setConversations(data))
         }
         getConv()
-    }, [userData?._id])
-
-    const handleCreateConversation = async () => {
-        const data = await createConversation()
-        dispatch(addConversation(data))
-    }
-
-
+    }, [userData?._id, dispatch])
 
     if (collapsed) {
         return (
@@ -49,8 +40,16 @@ function SideBar() {
                     <Plus size={17} />
                 </button>
 
+                <button
+                    title='Back to home'
+                    className='flex items-center justify-center w-9 h-9 rounded-xl text-slate-500 hover:text-slate-200 hover:bg-white/[0.05] transition-colors duration-150 bg-transparent border-none cursor-pointer'
+                    onClick={onHome}
+                >
+                    <HomeIcon size={16} />
+                </button>
+
                 <div className='flex-1 overflow-y-auto px-2.5 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pt-5'>
-                    {conversations.map((conv, i) => {
+                    {conversations.map((conv) => {
                         const isActive = selectedConversation?._id == conv?._id
                         return (
                             <div
@@ -131,6 +130,13 @@ function SideBar() {
                     <span className='text-[16px] font-semibold text-slate-100 tracking-tight flex-1'>
                         CortexAI
                     </span>
+                    <button
+                        title='Back to home'
+                        className='flex items-center justify-center w-7 h-7 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-white/[0.05] transition-colors duration-150 bg-transparent border-none cursor-pointer'
+                        onClick={onHome}
+                    >
+                        <HomeIcon size={14} />
+                    </button>
                     <span className='text-[10px] font-medium text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded-full tracking-wide'>{userData?.plan || "free"}</span>
                     <button className='flex items-center justify-center w-7 h-7 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-white/[0.05] transition-colors duration-150 bg-transparent border-none cursor-pointer'
                         onClick={()=>dispatch(setSelectedConversation(null))}>
@@ -161,7 +167,7 @@ function SideBar() {
 
 
                 <div className='flex-1 overflow-y-auto px-2.5 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'>
-                    {conversations?.map((conv, i) => {
+                    {conversations?.map((conv) => {
                         const isActive = selectedConversation?._id == conv?._id
                         return (
                             <div
