@@ -21,7 +21,7 @@ const features = [
     {
         icon: Zap,
         title: 'Auto-routing multi-agent system',
-        description: 'Ask naturally. CortexAI detects intent and sends your request to the right specialist agent instead of forcing one model to do everything.',
+        description: 'Ask naturally. Allverse AI detects intent and sends your request to the right specialist agent instead of forcing one model to do everything.',
         tag: 'Smart routing',
     },
     {
@@ -67,7 +67,7 @@ const steps = [
         number: '02',
         icon: Wand2,
         title: 'Ask or choose an agent',
-        description: 'Leave Auto selected and let CortexAI route the request, or pick chat, search, coding, PDF, PPT, or vision yourself.',
+        description: 'Leave Auto selected and let Allverse AI route the request, or pick chat, search, coding, PDF, PPT, or vision yourself.',
     },
     {
         number: '03',
@@ -158,12 +158,12 @@ function Landing({ onLaunch, isLoggedIn }) {
                             <Sparkles size={17} />
                         </span>
                         <span className='text-[17px] font-semibold tracking-tight'>
-                            Cortex<span className='text-indigo-400'>AI</span>
+                            Allverse<span className='text-indigo-400'> AI</span>
                         </span>
                     </a>
 
                     <nav className='hidden items-center gap-8 text-[13px] font-medium text-slate-400 md:flex'>
-                        <a href='#features' className='transition-colors hover:text-white'>Why CortexAI</a>
+                        <a href='#features' className='transition-colors hover:text-white'>Why Allverse AI</a>
                         <a href='#how-it-works' className='transition-colors hover:text-white'>How it works</a>
                         <a href='#reviews' className='transition-colors hover:text-white'>Reviews</a>
                     </nav>
@@ -193,7 +193,7 @@ function Landing({ onLaunch, isLoggedIn }) {
                     </h1>
 
                     <p className='mx-auto mt-6 max-w-2xl text-[15px] leading-relaxed text-slate-400 md:text-[16px]'>
-                        CortexAI routes each request to the right specialist agent. Chat, search, code,
+                        Allverse AI routes each request to the right specialist agent. Chat, search, code,
                         read documents, build decks, and understand images without switching tabs or
                         losing context.
                     </p>
@@ -223,7 +223,7 @@ function Landing({ onLaunch, isLoggedIn }) {
                             <span className='h-2.5 w-2.5 rounded-full bg-rose-500/70' />
                             <span className='h-2.5 w-2.5 rounded-full bg-amber-500/70' />
                             <span className='h-2.5 w-2.5 rounded-full bg-emerald-500/70' />
-                            <span className='ml-2 text-[11px] font-medium text-slate-600'>CortexAI workspace</span>
+                            <span className='ml-2 text-[11px] font-medium text-slate-600'>Allverse AI workspace</span>
                         </div>
 
                         <div className='grid gap-3 p-3 text-left md:grid-cols-[1.15fr_0.85fr]'>
@@ -342,13 +342,13 @@ function Landing({ onLaunch, isLoggedIn }) {
 
                 <section id='features' className='mx-auto max-w-6xl px-5 py-20 md:py-24'>
                     <div className='max-w-2xl'>
-                        <p className='text-[11px] font-semibold uppercase tracking-[0.18em] text-indigo-400'>Why CortexAI</p>
+                        <p className='text-[11px] font-semibold uppercase tracking-[0.18em] text-indigo-400'>Why Allverse AI</p>
                         <h2 className='mt-3 text-3xl font-semibold tracking-tight text-slate-50 md:text-4xl'>
                             One workspace that adapts to the work
                         </h2>
                         <p className='mt-4 text-[14.5px] leading-relaxed text-slate-400'>
                             Most AI tools make you choose a model, then manage the context yourself.
-                            CortexAI chooses the right workflow, remembers the thread, and gives you
+                            Allverse AI chooses the right workflow, remembers the thread, and gives you
                             something you can actually use.
                         </p>
                     </div>
@@ -428,7 +428,7 @@ function Landing({ onLaunch, isLoggedIn }) {
                                 People are getting more done
                             </h2>
                             <p className='mt-4 text-[14.5px] leading-relaxed text-slate-400'>
-                                Feedback from developers, founders, and researchers testing the CortexAI preview.
+                                Feedback from developers, founders, and researchers testing the Allverse AI preview.
                             </p>
                         </div>
                         <div className='flex items-center gap-3 rounded-xl border border-white/[0.07] bg-white/[0.025] px-4 py-3'>
@@ -478,14 +478,14 @@ function Landing({ onLaunch, isLoggedIn }) {
                                 Stop juggling tools. Start one conversation.
                             </h2>
                             <p className='mx-auto mt-4 max-w-lg text-[14px] leading-relaxed text-slate-400'>
-                                Bring your questions, documents, and ideas. CortexAI brings the agents,
+                                Bring your questions, documents, and ideas. Allverse AI brings the agents,
                                 the memory, and the finished artifacts.
                             </p>
                             <button
                                 onClick={onLaunch}
                                 className='group mx-auto mt-7 flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3.5 text-[14px] font-semibold text-slate-900 transition-colors duration-150 hover:bg-slate-200'
                             >
-                                {isLoggedIn ? 'Return to workspace' : 'Launch CortexAI'}
+                                {isLoggedIn ? 'Return to workspace' : 'Launch Allverse AI'}
                                 <ArrowRight size={16} className='transition-transform duration-150 group-hover:translate-x-0.5' />
                             </button>
                         </div>
@@ -500,7 +500,7 @@ function Landing({ onLaunch, isLoggedIn }) {
                             <Sparkles size={14} />
                         </span>
                         <div>
-                            <p className='text-[13px] font-semibold tracking-tight'>CortexAI</p>
+                            <p className='text-[13px] font-semibold tracking-tight'>Allverse AI</p>
                             <p className='text-[10.5px] text-slate-600'>Multi-agent AI workspace</p>
                         </div>
                     </div>

@@ -36,7 +36,7 @@ async def chat_agent(state: AgentState) -> AgentState:
         else:
             search_context = ""
 
-        system_prompt = f"""You are NeuralHub, an intelligent AI assistant.
+        system_prompt = f"""You are Allverse AI, an intelligent AI assistant.
 
 {search_context}
 

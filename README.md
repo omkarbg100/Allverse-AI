@@ -1,4 +1,4 @@
-# Vertex AI — Multi-Agent AI Platform
+# Allverse AI — Multi-Agent AI Platform
 
 <p align="center">
   <strong>An intelligent multi-agent workspace for chat, search, coding, and document-based AI workflows.</strong>
@@ -12,9 +12,9 @@
 
 ## Overview
 
-**Cortex AI** is a production-style Multi-Agent AI Platform that brings multiple specialized AI capabilities into a single conversational workspace.
+**Allverse AI** is a production-style Multi-Agent AI Platform that brings multiple specialized AI capabilities into a single conversational workspace.
 
-Instead of relying on a single AI workflow, Cortex AI uses specialized agents that can route tasks based on the user's intent. The platform can handle general conversations, search and summarize information, work with retrieved knowledge, and assist with coding tasks.
+Instead of relying on a single AI workflow, Allverse AI uses specialized agents that can route tasks based on the user's intent. The platform can handle general conversations, search and summarize information, work with retrieved knowledge, and assist with coding tasks.
 
 The system is designed around a scalable **microservices architecture**, with dedicated services for authentication, conversations, agent orchestration, and supporting infrastructure.
 
@@ -24,7 +24,7 @@ The system is designed around a scalable **microservices architecture**, with de
 
 ### 🤖 Multi-Agent AI
 
-Cortex AI uses specialized agents coordinated through LangGraph and LangChain.
+Allverse AI uses specialized agents coordinated through LangGraph and LangChain.
 
 - **Chat Agent** — Handles general conversational requests
 - **Search Agent** — Retrieves and summarizes web information
@@ -114,7 +114,7 @@ Services can be containerized and managed using Docker.
 
 ```text
                          ┌──────────────────────┐
-                         │      Cortex AI       │
+                         │      Allverse AI     │
                          │   React + Redux UI   │
                          └──────────┬───────────┘
                                     │
@@ -195,13 +195,13 @@ Agent Router
              Agent   Agent  Workflow
 ```
 
-This architecture allows Cortex AI to dynamically select the appropriate workflow instead of using the same processing pipeline for every request.
+This architecture allows Allverse AI to dynamically select the appropriate workflow instead of using the same processing pipeline for every request.
 
 ---
 
 # 🔎 Retrieval-Augmented Generation
 
-Cortex AI uses **Qdrant** as the vector database for semantic retrieval.
+Allverse AI uses **Qdrant** as the vector database for semantic retrieval.
 
 The general RAG workflow is:
 
@@ -334,7 +334,7 @@ Each service can be developed, tested, containerized, and deployed independently
 # 📂 Project Structure
 
 ```text
-cortex-ai/
+allverse-ai/
 │
 ├── frontend/
 │   ├── src/
@@ -401,9 +401,9 @@ You will also need the required credentials for:
 ## 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/cortex-ai.git
+git clone https://github.com/your-username/allverse-ai.git
 
-cd cortex-ai
+cd allverse-ai
 ```
 
 ---
@@ -569,7 +569,7 @@ Chat Agent    Search Agent    Coding Agent
 
 # 🎯 Use Cases
 
-Cortex AI can be used as a foundation for:
+Allverse AI can be used as a foundation for:
 
 - AI-powered conversational assistants
 - Multi-agent AI applications
@@ -611,7 +611,7 @@ Docker-based services can be deployed independently and scaled according to work
 
 # 🔒 Security Considerations
 
-Cortex AI uses multiple layers of application security.
+Allverse AI uses multiple layers of application security.
 
 - Firebase Authentication
 - JWT authorization
@@ -647,9 +647,9 @@ Never commit API keys, JWT secrets, Firebase credentials, or database credential
 
 # 🧭 Project Vision
 
-Cortex AI is designed around the idea of a unified AI workspace where users can interact with multiple specialized agents through a single interface.
+Allverse AI is designed around the idea of a unified AI workspace where users can interact with multiple specialized agents through a single interface.
 
-Rather than building separate applications for chat, research, coding, and knowledge retrieval, Cortex AI brings these capabilities together through an orchestrated multi-agent architecture.
+Rather than building separate applications for chat, research, coding, and knowledge retrieval, Allverse AI brings these capabilities together through an orchestrated multi-agent architecture.
 
 The platform provides a foundation for building scalable AI applications where specialized agents can collaborate, retrieve external knowledge, maintain context, and produce task-specific results.
 
@@ -661,15 +661,15 @@ Add your project screenshots below:
 
 ```html
 <p align="center">
-  <img src="YOUR_SCREENSHOT_URL_1" alt="Cortex AI Chat" width="800" />
+  <img src="YOUR_SCREENSHOT_URL_1" alt="Allverse AI Chat" width="800" />
 </p>
 
 <p align="center">
-  <img src="YOUR_SCREENSHOT_URL_2" alt="Cortex AI Search" width="800" />
+  <img src="YOUR_SCREENSHOT_URL_2" alt="Allverse AI Search" width="800" />
 </p>
 
 <p align="center">
-  <img src="YOUR_SCREENSHOT_URL_3" alt="Cortex AI Coding" width="800" />
+  <img src="YOUR_SCREENSHOT_URL_3" alt="Allverse AI Coding" width="800" />
 </p>
 ```
 

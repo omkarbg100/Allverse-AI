@@ -13,7 +13,7 @@ class Settings(BaseSettings):
 
     # ── LiteLLM (unified gateway) ──────────────────────────────
     LITELLM_URL: str = "http://litellm:4000"
-    LITELLM_API_KEY: str = "sk-cortex-litellm-master-key"
+    LITELLM_API_KEY: str = "sk-allverse-litellm-master-key"
     USE_LITELLM: bool = True
 
     # ── Ollama ──────────────────────────────────────────────────
@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://redis:6379"
 
     # ── MongoDB ─────────────────────────────────────────────────
-    MONGODB_URI: str = "mongodb://mongodb:27017/cortex_ai"
+    MONGODB_URI: str = "mongodb://mongodb:27017/allverse_ai"
 
     # ── Internal service URLs ────────────────────────────────────
     CHAT_SERVICE: str = "http://chat:8002"

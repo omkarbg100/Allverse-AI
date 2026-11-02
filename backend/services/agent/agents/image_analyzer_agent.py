@@ -21,7 +21,7 @@ from graph.state import AgentState
 
 logger = logging.getLogger(__name__)
 
-IMAGE_ANALYZER_SYSTEM = """You are NeuralHub Image Analyzer.
+IMAGE_ANALYZER_SYSTEM = """You are Allverse AI Image Analyzer.
 
 Rules:
 - Analyze only the uploaded image.

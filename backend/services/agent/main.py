@@ -1,5 +1,5 @@
 """
-NeuralHub — Python AI Service
+Allverse AI — Python AI Service
 FastAPI entry point — mirrors the old Node.js index.js
 
 Run locally:
@@ -34,16 +34,16 @@ async def lifespan(app: FastAPI):
     # Ensure temp upload directory exists
     temp = Path(__file__).parent / "temp"
     temp.mkdir(exist_ok=True)
-    logger.info("NeuralHub AI Service starting on port %s", settings.PORT)
+    logger.info("Allverse AI Service starting on port %s", settings.PORT)
     logger.info("Ollama host: %s", settings.OLLAMA_HOST)
     logger.info("Groq fallback: %s", "enabled" if settings.GROQ_API_KEY else "disabled (no key)")
     yield
-    logger.info("NeuralHub AI Service shutting down.")
+    logger.info("Allverse AI Service shutting down.")
 
 
 # ── App ────────────────────────────────────────────────────────────
 app = FastAPI(
-    title="NeuralHub AI Service",
+    title="Allverse AI Service",
     description="Python FastAPI + LangGraph multi-agent AI service",
     version="1.0.0",
     lifespan=lifespan,
@@ -63,7 +63,7 @@ app.include_router(router)          # registers POST /chat
 
 @app.get("/")
 async def root():
-    return {"message": "hello from NeuralHub AI service (Python)"}
+    return {"message": "hello from Allverse AI service (Python)"}
 
 
 @app.get("/health")

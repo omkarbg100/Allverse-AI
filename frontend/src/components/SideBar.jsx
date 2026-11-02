@@ -128,7 +128,7 @@ function SideBar({ onHome }) {
                         <X/>
                     </button>
                     <span className='text-[16px] font-semibold text-slate-100 tracking-tight flex-1'>
-                        CortexAI
+                        Allverse AI
                     </span>
                     <button
                         title='Back to home'

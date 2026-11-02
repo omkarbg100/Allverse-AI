@@ -26,7 +26,7 @@ from graph.state import AgentState
 
 logger = logging.getLogger(__name__)
 
-PDF_RAG_SYSTEM = """You are NeuralHub PDF Assistant.
+PDF_RAG_SYSTEM = """You are Allverse AI PDF Assistant.
 
 Rules:
 - Answer ONLY from the uploaded PDF.

@@ -34,7 +34,7 @@ DOCUMENTATION
 User Request:
 """
 
-CODE_GEN_PROMPT = """You are NeuralHub Coding Agent.
+CODE_GEN_PROMPT = """You are Allverse AI Coding Agent.
 
 Generate the requested project.
 

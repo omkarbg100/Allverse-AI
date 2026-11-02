@@ -2,52 +2,52 @@ services:
   # ── 1. Databases & Infrastructure ─────────────────────────────
   mongodb:
     image: mongo:7
-    container_name: cortex-mongodb
+    container_name: allverse-mongodb
     restart: unless-stopped
     ports:
       - "27017:27017"
     volumes:
       - mongo-data:/data/db
     networks:
-      - cortex-net
+      - allverse-net
 
   redis:
     image: redis:7-alpine
-    container_name: cortex-redis
+    container_name: allverse-redis
     restart: unless-stopped
     ports:
       - "6379:6379"
     volumes:
       - redis-data:/data
     networks:
-      - cortex-net
+      - allverse-net
 
   qdrant:
     image: qdrant/qdrant:latest
-    container_name: cortex-qdrant
+    container_name: allverse-qdrant
     restart: unless-stopped
     ports:
       - "6333:6333"
     volumes:
       - qdrant-data:/qdrant/storage
     networks:
-      - cortex-net
+      - allverse-net
 
   s3mock:
     image: adobe/s3mock:latest
-    container_name: cortex-s3
+    container_name: allverse-s3
     restart: unless-stopped
     environment:
       initialBuckets: agent-files
     ports:
       - "9000:9090"
     networks:
-      - cortex-net
+      - allverse-net
 
   # ── 2. LiteLLM Unified Gateway ─────────────────────────────────
   litellm:
     image: ghcr.io/berriai/litellm:main-latest
-    container_name: cortex-litellm
+    container_name: allverse-litellm
     restart: unless-stopped
     ports:
       - "4001:4000"
@@ -57,19 +57,19 @@ services:
       - GROQ_API_KEY=${GROQ_API_KEY:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
-      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY:-sk-cortex-litellm-master-key}
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY:-sk-allverse-litellm-master-key}
     command: ["--config", "/app/config.yaml", "--port", "4000", "--num_workers", "1"]
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
-      - cortex-net
+      - allverse-net
 
   # ── 3. Node.js Backend Microservices ──────────────────────────
   auth:
     build:
       context: ./backend
       dockerfile: ./services/auth/Dockerfile
-    container_name: cortex-auth
+    container_name: allverse-auth
     restart: unless-stopped
     ports:
       - "8001:8001"
@@ -77,20 +77,20 @@ services:
       - ./backend/services/auth/.env
     environment:
       - PORT=8001
-      - MONGODB_URI=mongodb://mongodb:27017/cortex_ai
+      - MONGODB_URI=mongodb://mongodb:27017/allverse_ai
       - REDIS_URL=redis://redis:6379
       - ALLOW_DEV_LOGIN=${ALLOW_DEV_LOGIN:-false}
     depends_on:
       - mongodb
       - redis
     networks:
-      - cortex-net
+      - allverse-net
 
   chat:
     build:
       context: ./backend
       dockerfile: ./services/chat/Dockerfile
-    container_name: cortex-chat
+    container_name: allverse-chat
     restart: unless-stopped
     ports:
       - "8002:8002"
@@ -98,19 +98,19 @@ services:
       - ./backend/services/chat/.env
     environment:
       - PORT=8002
-      - MONGODB_URI=mongodb://mongodb:27017/cortex_ai
+      - MONGODB_URI=mongodb://mongodb:27017/allverse_ai
       - REDIS_URL=redis://redis:6379
     depends_on:
       - mongodb
       - redis
     networks:
-      - cortex-net
+      - allverse-net
 
   billing:
     build:
       context: ./backend
       dockerfile: ./services/billing/Dockerfile
-    container_name: cortex-billing
+    container_name: allverse-billing
     restart: unless-stopped
     ports:
       - "8004:8004"
@@ -118,7 +118,7 @@ services:
       - ./backend/services/billing/.env
     environment:
       - PORT=8004
-      - MONGODB_URI=mongodb://mongodb:27017/cortex_ai
+      - MONGODB_URI=mongodb://mongodb:27017/allverse_ai
       - REDIS_URL=redis://redis:6379
       - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID:-rzp_test_placeholder}
       - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET:-rzp_secret_placeholder}
@@ -126,14 +126,14 @@ services:
       - mongodb
       - redis
     networks:
-      - cortex-net
+      - allverse-net
 
   # ── 4. Python AI Service (FastAPI + LangGraph) ─────────────────
   agent:
     build:
       context: ./backend/services/agent
       dockerfile: Dockerfile
-    container_name: cortex-agent
+    container_name: allverse-agent
     restart: unless-stopped
     ports:
       - "8003:8003"
@@ -142,11 +142,11 @@ services:
     environment:
       - PORT=8003
       - LITELLM_URL=http://litellm:4000
-      - LITELLM_API_KEY=${LITELLM_MASTER_KEY:-sk-cortex-litellm-master-key}
+      - LITELLM_API_KEY=${LITELLM_MASTER_KEY:-sk-allverse-litellm-master-key}
       - USE_LITELLM=true
       - OLLAMA_HOST=http://host.docker.internal:11434
       - REDIS_URL=redis://redis:6379
-      - MONGODB_URI=mongodb://mongodb:27017/cortex_ai
+      - MONGODB_URI=mongodb://mongodb:27017/allverse_ai
       - AUTH_SERVICE=http://auth:8001
       - CHAT_SERVICE=http://chat:8002
       - MINIO_ENDPOINT=http://s3mock:9090
@@ -164,14 +164,14 @@ services:
       - qdrant
       - s3mock
     networks:
-      - cortex-net
+      - allverse-net
 
   # ── 5. Gateway (Reverse Proxy / API Router) ────────────────────
   gateway:
     build:
       context: ./backend
       dockerfile: ./gateway/Dockerfile
-    container_name: cortex-gateway
+    container_name: allverse-gateway
     restart: unless-stopped
     ports:
       - "8000:8000"
@@ -192,14 +192,14 @@ services:
       - billing
       - agent
     networks:
-      - cortex-net
+      - allverse-net
 
   # ── 6. Frontend (React + Vite + Tailwind + Beacon UI) ──────────
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: cortex-frontend
+    container_name: allverse-frontend
     restart: unless-stopped
     ports:
       - "5173:5173"
@@ -210,10 +210,10 @@ services:
     depends_on:
       - gateway
     networks:
-      - cortex-net
+      - allverse-net
 
 networks:
-  cortex-net:
+  allverse-net:
     driver: bridge
 
 volumes:

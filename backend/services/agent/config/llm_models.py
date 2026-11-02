@@ -55,7 +55,7 @@ def _build_litellm(agent: str):
     return ChatOpenAI(
         model=model,
         base_url=f"{settings.LITELLM_URL}/v1",
-        api_key=settings.LITELLM_API_KEY or "sk-cortex-litellm-master-key",
+        api_key=settings.LITELLM_API_KEY or "sk-allverse-litellm-master-key",
         temperature=0.7,
         max_tokens=4096,
     )

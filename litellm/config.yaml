@@ -42,32 +42,32 @@ model_list:
       api_key: os.environ/GROQ_API_KEY
 
   # ── Generic Aliases (Ollama Primary with Groq Fallback) ────────────
-  - model_name: cortex-chat
+  - model_name: allverse-chat
     litellm_params:
       model: ollama/llama3.2:3b
       api_base: http://host.docker.internal:11434
 
-  - model_name: cortex-chat
+  - model_name: allverse-chat
     litellm_params:
       model: groq/llama-3.3-70b-versatile
       api_key: os.environ/GROQ_API_KEY
 
-  - model_name: cortex-coding
+  - model_name: allverse-coding
     litellm_params:
       model: ollama/deepseek-coder-v2:16b
       api_base: http://host.docker.internal:11434
 
-  - model_name: cortex-coding
+  - model_name: allverse-coding
     litellm_params:
       model: groq/llama-3.3-70b-versatile
       api_key: os.environ/GROQ_API_KEY
 
-  - model_name: cortex-vision
+  - model_name: allverse-vision
     litellm_params:
       model: ollama/llava:13b
       api_base: http://host.docker.internal:11434
 
-  - model_name: cortex-vision
+  - model_name: allverse-vision
     litellm_params:
       model: groq/llama-3.2-90b-vision-preview
       api_key: os.environ/GROQ_API_KEY
@@ -75,9 +75,9 @@ model_list:
 router_settings:
   routing_strategy: "latency-based-routing"
   fallbacks:
-    - cortex-chat: ["groq-chat"]
-    - cortex-coding: ["groq-chat"]
-    - cortex-vision: ["groq-vision"]
+    - allverse-chat: ["groq-chat"]
+    - allverse-coding: ["groq-chat"]
+    - allverse-vision: ["groq-vision"]
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
