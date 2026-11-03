@@ -7,6 +7,8 @@ Flow: LLM returns JSON structure → reportlab builds PDF → upload to S3 → p
 import logging
 import time
 
+from langchain_community.document_loaders import PyPDFLoader
+
 from config.llm_models import get_model
 from config.rate_limit import check_rate_limit
 from utils.deduct_credits import deduct_credits
@@ -34,19 +36,42 @@ Generate 4-8 sections.
 
 Each section should have 3-6 concise bullet points.
 
-Topic:
+User request:
 
 """
+
+
+def _read_source_document(file: dict | None) -> str:
+    if not file or file.get("mimetype") != "application/pdf":
+        return ""
+    try:
+        pages = PyPDFLoader(file["path"]).load()
+        text = "\n\n".join(page.page_content for page in pages).strip()
+        return text[:14000]
+    except Exception as e:
+        logger.warning("pdf_agent could not read source PDF: %s", e)
+        return ""
 
 
 async def pdf_agent(state: AgentState) -> AgentState:
     try:
         await check_rate_limit(state["user_id"], "pdf")
 
+        source = _read_source_document(state.get("file"))
+        user_request = state["prompt"]
+        if source:
+            logger.info("pdf_agent using uploaded source (%s chars)", len(source))
+            user_request += (
+                "\n\nRewrite and update the source document below according to the "
+                "request above. Keep important factual details, improve the structure "
+                "and wording, and return the result as the document described in the "
+                "JSON schema.\n\nSOURCE DOCUMENT:\n" + source
+            )
+
         llm = get_model("pdf")
         data = await invoke_json(
             llm,
-            PDF_JSON_PROMPT + state["prompt"],
+            PDF_JSON_PROMPT + user_request,
             '{"title":"","subtitle":"","sections":[{"heading":"","points":[""]}]}',
         )
         if not isinstance(data.get("sections"), list):
@@ -76,4 +101,3 @@ async def pdf_agent(state: AgentState) -> AgentState:
         if isinstance(error_msg, dict):
             raise
         return {**state, "ai_response": str(getattr(e, "detail", "Failed to generate PDF."))}
-

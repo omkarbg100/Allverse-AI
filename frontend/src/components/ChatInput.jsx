@@ -1,5 +1,5 @@
 import { Code2, FileText, Globe, ImageIcon, MessageSquare, Mic, MicOff, Paperclip, Presentation, Send, X, Zap } from 'lucide-react'
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import sendMessage from '../features/sendMessage'
 import { useDispatch, useSelector } from 'react-redux'
 import { addMessage, setArtifacts, setIsLoading, setMessages } from '../redux/messageSlice'
@@ -7,13 +7,14 @@ import { createConversation } from '../features/createConversation'
 import { addConversation, setConvTitle, setSelectedConversation } from '../redux/conversationSlice'
 import { updateConversation } from '../features/updateConversation'
 import { useRef } from 'react'
+import formatFileSize from '../../utils/formatFileSize'
 
 
 function ChatInput() {
   const [value, setValue] = useState("")
   const [selectedAgent, setSelectedAgent] = useState("Auto")
   const { selectedConversation } = useSelector(state => state.conversation)
-  const { messages, isLoading } = useSelector(state => state.message)
+  const { isLoading } = useSelector(state => state.message)
   const [selectedFile, setSelectedFile] = useState(null)
   const [listening, setListening] = useState(false)
   const recognitionRef = useRef(null)
@@ -50,6 +51,7 @@ function ChatInput() {
   const toggleMic = () => {
     if (!recognitionRef.current) {
       alert("speech recognition not supported")
+      return
     }
     if (listening) {
       recognitionRef.current.stop()
@@ -58,17 +60,10 @@ function ChatInput() {
       recognitionRef.current.start()
       setListening(true)
     }
-
   }
 
-
-
-
-
-
-
-
   const handleSendMessage = async () => {
+    if (!value.trim() || isLoading) return;
     dispatch(setIsLoading(true))
     let conversation = selectedConversation
     if (!conversation) {
@@ -85,8 +80,6 @@ function ChatInput() {
       dispatch(setConvTitle({ conversationId: conversation?._id, title: value.slice(0, 40) }))
     }
 
-
-    console.log(selectedFile)
     const formData = new FormData()
     formData.append("prompt", value.trim())
     formData.append("conversationId", conversation?._id)
@@ -95,16 +88,27 @@ function ChatInput() {
       formData.append("file", selectedFile)
     }
 
+    const attachment = selectedFile
+      ? { name: selectedFile.name, type: selectedFile.type, size: selectedFile.size }
+      : null
 
-
-    dispatch(addMessage({ role: "user", content: value.trim() }))
+    dispatch(addMessage({
+      role: "user",
+      content: value.trim(),
+      attachments: attachment ? [attachment] : [],
+    }))
     setValue("")
+    setSelectedFile(null)
+    if (fileRef.current) fileRef.current.value = ""
+
     const data = await sendMessage(formData)
     dispatch(setIsLoading(false))
-    setSelectedFile(null)
+    if (!data) {
+      dispatch(addMessage({ role: "assistant", content: "Something went wrong while sending that message. Please try again." }))
+      return
+    }
     dispatch(setArtifacts(data.artifacts || []))
     dispatch(addMessage({ role: "assistant", content: data?.answer, images: data?.images }))
-    console.log(data)
   }
 
   const agents = [
@@ -153,15 +157,17 @@ function ChatInput() {
   ]
 
   return (
-    <div className='w-full overflow-hidden px-3 md:px-5 py-4 border-t border-white/[0.06] bg-[#0d0f14]'>
-      <div className='flex flex-col gap-2 bg-white/[0.03] border border-white/[0.07] rounded-2xl px-4 pt-3.5 pb-3'>
+    <div className='w-full px-3 md:px-6 py-4 border-t border-[#1a1a1a]/10 bg-[#ffffeb]'>
+      <div className='max-w-[900px] mx-auto flex flex-col gap-2 bg-[#fffdf9] border border-[#1a1a1a]/18 rounded-xl px-4 pt-3.5 pb-3 shadow-[2px_2px_0_rgba(26,26,26,0.04)] transition-colors duration-150 focus-within:border-[#034f46]/35'>
 
-        <div className='flex w-[80%] gap-2 pr-2 flex-wrap'>
+        <div className='flex w-full gap-1.5 pr-2 flex-wrap'>
           {agents.map((agent) => {
             const isActive = selectedAgent === agent.label
             const Icon = agent.icon
             return (
-              <div
+              <button
+                key={agent.id}
+                type='button'
                 onClick={() => setSelectedAgent(agent.label)}
                 className={`
             flex-shrink-0
@@ -169,57 +175,57 @@ function ChatInput() {
             inline-flex
             items-center
             gap-1.5
-            px-3
-            py-2
-            rounded-full
-            text-xs
+            px-2.5
+            py-1.5
+            rounded-md
+            text-[11.5px]
             font-medium
             border
-            transition-all
+            transition-colors
+            duration-150
 
             ${isActive
-                    ? "bg-gradient-to-r from-indigo-500 to-violet-600 text-white border-transparent shadow-[0_1px_8px_rgba(99,102,241,.35)]"
-                    : "bg-white/[0.03] text-slate-400 border-white/[0.06] hover:bg-white/[0.07]"
+                    ? "bg-[#034f46] text-[#ffffeb] border-[#034f46] shadow-[1px_1px_0_rgba(3,79,70,0.18)]"
+                    : "bg-[#ffffeb] text-[#1a1a1a]/55 border-[#1a1a1a]/12 hover:bg-[#e4e4d0] hover:text-[#1a1a1a]"
                   }
           `}>
 
-                <Icon size={14}
+                <Icon size={13}
                   className={
                     isActive
-                      ? "text-white"
-                      : "text-slate-500"
+                      ? "text-[#ffffeb]"
+                      : "text-[#1a1a1a]/40"
                   } />
 
                 {agent.label}
 
-              </div>
+              </button>
             )
 
           })}
         </div>
 
         {
-          selectedFile && <div className='my-3'>
+          selectedFile && <div className='my-2'>
 
-            <div className='inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2'>
+            <div className='inline-flex items-center gap-2.5 rounded-lg border border-[#1a1a1a]/15 bg-[#e4e4d0]/55 px-3 py-2'>
               {
                 selectedFile?.type === "application/pdf" ? <FileText size={16}
-
-                  className="text-red-400"
-                /> : selectedFile.type.startsWith("image/") && <img src={URL.createObjectURL(selectedFile)} className="h-10 w-10 rounded-xl object-cover mt-3"
+                  className="text-[#ff6c4c]"
+                /> : selectedFile.type.startsWith("image/") && <img src={URL.createObjectURL(selectedFile)} className="h-10 w-10 rounded-md object-cover border border-[#1a1a1a]/10"
                 />
               }
 
               <div>
-                <p className='text-xs text-white'>
+                <p className='text-[12px] text-[#1a1a1a] max-w-[220px] truncate'>
                   {selectedFile?.name}
                 </p>
-                <p className='text-[10px] text-slate-500'>
-                  {Math.ceil(selectedFile.size)}KB
+                <p className='workspace-mono text-[10px] text-[#1a1a1a]/40'>
+                  {formatFileSize(selectedFile.size)}
                 </p>
 
               </div>
-              <button className='ml-2' onClick={() => { setSelectedFile(null); fileRef.current.value = "" }}><X size={14} className='text-slate-500 hover:text-white' /></button>
+              <button className='ml-2 bg-transparent border-none cursor-pointer' onClick={() => { setSelectedFile(null); fileRef.current.value = "" }}><X size={14} className='text-[#1a1a1a]/40 hover:text-[#034f46]' /></button>
             </div>
 
 
@@ -228,10 +234,10 @@ function ChatInput() {
 
 
         <textarea
-          placeholder='Ask Anything...'
+          placeholder='Ask anything...'
           onChange={(e) => setValue(e.target.value)}
           value={value}
-          className="w-full bg-transparent outline-none resize-none text-[14px] text-slate-200 placeholder:text-slate-600 leading-relaxed [scrollbar-width:none] [&::-webkit-scrollbar]:hidden disabled:opacity-50"
+          className="w-full bg-transparent outline-none resize-none text-[13.5px] text-[#1a1a1a] placeholder:text-[#1a1a1a]/30 leading-relaxed [scrollbar-width:none] [&::-webkit-scrollbar]:hidden disabled:opacity-50"
           rows={3}
         />
         <div className='flex items-center justify-between'>
@@ -244,24 +250,24 @@ function ChatInput() {
               }
             }} />
 
-            <button className='flex items-center justify-center w-8 h-8 rounded-lg text-slate-600 hover:text-slate-400 hover:bg-white/[0.05] border border-transparent hover:border-white/[0.06] transition-all duration-150 bg-transparent cursor-pointer' onClick={() => fileRef.current.click()}>
+            <button className='flex items-center justify-center w-8 h-8 rounded-md text-[#1a1a1a]/40 hover:text-[#034f46] hover:bg-[#e4e4d0]/60 border border-transparent transition-colors duration-150 bg-transparent cursor-pointer' onClick={() => fileRef.current.click()}>
               <Paperclip size={16} />
             </button>
             <button
               onClick={toggleMic}
-              className={`flex items-center justify-center w-8 h-8 rounded-lg  transition-all duration-150 cursor-pointer ${listening ?"bg-red-500 text-white":"text-slate-600 hover:bg-white/[0.05]" }`}>
-             {listening?<Mic size={16} />:<MicOff size={16}/>} 
+              className={`flex items-center justify-center w-8 h-8 rounded-md border border-transparent transition-colors duration-150 cursor-pointer ${listening ? "bg-[#ff6c4c] text-[#ffffeb]" : "text-[#1a1a1a]/40 hover:text-[#034f46] hover:bg-[#e4e4d0]/60"}`}>
+              {listening ? <Mic size={16} /> : <MicOff size={16} />}
             </button>
           </div>
           <button
-            disabled={!value && isLoading}
+            disabled={!value.trim() || isLoading}
             onClick={handleSendMessage}
-            className={`flex items-center justify-center w-8 h-8 rounded-lg border-none cursor-pointer transition-all duration-150 ${value.trim() ? "bg-linear-to-br from-indigo-500 to-violet-700 hover:opacity-90 text-white" : "bg-white/[0.05] text-slate-600 cursor-not-allowed"}`}>
-          <Send size={15} />
-        </button>
+            className={`flex items-center justify-center w-8 h-8 rounded-md border-none cursor-pointer transition-colors duration-150 ${value.trim() && !isLoading ? "bg-[#034f46] hover:bg-[#023d36] text-[#ffffeb]" : "bg-[#e4e4d0] text-[#1a1a1a]/25 cursor-not-allowed"}`}>
+            <Send size={15} />
+          </button>
+        </div>
       </div>
     </div>
-    </div >
   )
 }
 

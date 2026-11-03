@@ -1,5 +1,4 @@
 import { MessageSquare } from 'lucide-react'
-import React from 'react'
 import { useSelector } from 'react-redux'
 
 function Nav() {
@@ -7,15 +6,15 @@ const {selectedConversation}=useSelector(state=>state.conversation)
 const {messages}=useSelector(state=>state.message)
   return (
 <>
-    {selectedConversation &&   <div className='h-14 flex items-center gap-2.5  px-5 border-b border-white/[0.06] bg-[#0d0f14]'>
-      <div className='flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-500/10 border border-indigo-500/20'>
-        <MessageSquare size={13} className="text-indigo-400"/>
+    {selectedConversation &&   <div className='h-14 flex items-center gap-3 pl-14 pr-4 lg:px-5 border-b border-[#1a1a1a]/10 bg-[#fffdf9] shrink-0'>
+      <div className='flex items-center justify-center w-7 h-7 rounded-md bg-[#034f46]/10 border border-[#034f46]/15'>
+        <MessageSquare size={13} className="text-[#034f46]"/>
       </div>
-      <div className='text-[14px] font-semibold text-slate-100 tracking-tight'>
+      <div className='workspace-display text-[20px] text-[#1a1a1a] tracking-tight truncate flex-1 min-w-0'>
 {selectedConversation?.title || "New Chat"}
       </div>
-      <div className='text-[10px] font-medium text-slate-600 bg-white/[0.04] border border-white/[0.06] px-2 py-0.5 rounded-full'>
-        {messages?.length} Messages
+      <div className='workspace-mono text-[10px] text-[#1a1a1a]/45 bg-[#e4e4d0] border border-[#1a1a1a]/10 px-2 py-0.5 rounded-full ml-auto shrink-0'>
+        {messages?.length || 0} {messages?.length === 1 ? "message" : "messages"}
       </div>
     </div>}
   </>

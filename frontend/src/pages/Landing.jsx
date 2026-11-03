@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import {
     ArrowRight,
     BrainCircuit,
@@ -8,520 +9,685 @@ import {
     Globe,
     Layers,
     Lock,
+    Menu,
     MessageSquare,
+    Plus,
     Presentation,
     Sparkles,
     Star,
-    Upload,
     Wand2,
-    Zap,
+    X,
 } from 'lucide-react'
+import './landing.css'
 
 const features = [
     {
-        icon: Zap,
-        title: 'Auto-routing multi-agent system',
-        description: 'Ask naturally. Allverse AI detects intent and sends your request to the right specialist agent instead of forcing one model to do everything.',
-        tag: 'Smart routing',
+        icon: Wand2,
+        title: 'The right agent, chosen for you',
+        description: 'Ask naturally. Allverse AI reads the request and sends it to chat, search, coding, PDF, PPT, or vision without making you pick a tool first.',
+        tag: 'Auto routing',
     },
     {
         icon: BrainCircuit,
         title: 'Memory that keeps the thread',
-        description: 'Redis-backed conversation memory gives every follow-up the context it needs, so you never have to repeat yourself or paste old answers back in.',
-        tag: 'Context aware',
+        description: 'Redis-backed conversation history gives every follow-up the context it needs. No re-pasting, no re-explaining, no lost direction.',
+        tag: 'Context',
     },
     {
         icon: Globe,
         title: 'Answers grounded in real sources',
-        description: 'The search agent retrieves current web information and feeds it into the response, so answers stay relevant instead of dated.',
+        description: 'The search agent retrieves current information and hands it to the response, so the answer reflects the web rather than a stale training cut-off.',
         tag: 'Live search',
     },
     {
-        icon: Code2,
-        title: 'From prompt to working project',
-        description: 'The coding agent generates complete HTML, CSS, and JavaScript projects, then hands them back as editable files in the artifact panel.',
-        tag: 'Build artifacts',
+        icon: Layers,
+        title: 'Artifacts, not just answers',
+        description: 'Finish with files you can keep: complete code projects, downloadable PDFs, and presentation-ready decks in the same conversation.',
+        tag: 'Artifacts',
     },
     {
-        icon: FileText,
-        title: 'Documents become conversations',
-        description: 'Upload PDFs and ask questions across their contents. Semantic retrieval with Qdrant finds the passages that matter.',
-        tag: 'PDF + RAG',
-    },
-    {
-        icon: Presentation,
-        title: 'Decks and visuals in minutes',
-        description: 'Turn briefs and reports into presentation-ready slide decks, and analyze or generate images without leaving the workspace.',
-        tag: 'PPT + vision',
+        icon: Lock,
+        title: 'Local-first by default',
+        description: 'Run Ollama models through LiteLLM on your own machine, then add a cloud fallback only when you decide the work needs one.',
+        tag: 'Private',
     },
 ]
 
 const steps = [
     {
-        number: '01',
-        icon: MessageSquare,
-        title: 'Start in seconds',
-        description: 'Open the workspace and sign in with Google or use the local demo login. No long setup, no plugin maze.',
+        label: 'Ask in plain language',
+        title: 'Start with the outcome.',
+        description: 'Describe what you want in the same words you would use with a teammate. Ask a question, paste a brief, drop in a document, or point at a problem.',
+        proof: 'POST /api/agent/chat · agent=auto',
     },
     {
-        number: '02',
-        icon: Wand2,
-        title: 'Ask or choose an agent',
-        description: 'Leave Auto selected and let Allverse AI route the request, or pick chat, search, coding, PDF, PPT, or vision yourself.',
+        label: 'Let the router decide',
+        title: 'One request, the right specialist.',
+        description: 'Auto mode chooses the agent, keeps the conversation memory, and passes context forward. Each specialist is built for a different kind of work.',
+        proof: 'router → chat | search | coding | pdf | ppt',
     },
     {
-        number: '03',
-        icon: Upload,
-        title: 'Add the context',
-        description: 'Drop in a PDF or image, ask for a web-grounded answer, or simply describe the outcome you want.',
-    },
-    {
-        number: '04',
-        icon: Layers,
-        title: 'Leave with finished work',
-        description: 'Get an answer you can keep, files you can download, and memory that carries the conversation forward.',
+        label: 'Leave with finished work',
+        title: 'Open it, download it, keep going.',
+        description: 'Answers stay in the thread. PDFs, decks, and code projects arrive as artifacts you can review, download, and refine in the next message.',
+        proof: 'artifact ready · link expires in 10 minutes',
     },
 ]
 
-const reviews = [
+const workbench = [
     {
+        icon: MessageSquare,
+        label: 'chat',
+        title: 'Think out loud',
+        description: 'A calm place for explanations, planning, and the question you have not fully formed yet.',
+    },
+    {
+        icon: Globe,
+        label: 'search',
+        title: 'Bring the current web',
+        description: 'Ask about what changed this week and get an answer with the latest context attached.',
+    },
+    {
+        icon: Code2,
+        label: 'code',
+        title: 'Ship working files',
+        description: 'Generate complete HTML, CSS, and JavaScript projects, ready to inspect and download.',
+    },
+    {
+        icon: FileText,
+        label: 'documents',
+        title: 'Read the long ones',
+        description: 'Upload a PDF, ask across its pages, and turn the important parts into a deck or report.',
+    },
+]
+
+const quotes = [
+    {
+        quote: 'Auto mode is the feature I did not know I needed. I type a request, and it goes to search, code, or a PDF without me choosing a tool first.',
         name: 'Aarav Mehta',
         role: 'Product engineer',
-        quote: 'Auto mode is the feature I did not know I needed. I type a request, and it goes to search, code, or a PDF without me choosing a tool first.',
-        initials: 'AM',
-        color: 'from-indigo-500 to-violet-600',
+        source: 'PRODUCT ENGINEER',
     },
     {
-        name: 'Sofia Kim',
-        role: 'Startup founder',
-        quote: 'I stopped bouncing between a chatbot, an editor, and slide software. The artifact panel means I actually leave with files at the end.',
-        initials: 'SK',
-        color: 'from-cyan-500 to-blue-600',
-    },
-    {
-        name: 'Daniel Okafor',
-        role: 'Platform engineer',
-        quote: 'Running local Ollama models through LiteLLM was the deciding factor. My data stays on my machine until I choose a cloud fallback.',
-        initials: 'DO',
-        color: 'from-emerald-500 to-teal-600',
-    },
-    {
+        quote: 'The PDF agent pulled exact answers out of a sixty-page report and cited the pages. That used to take me an entire afternoon.',
         name: 'Priya Nair',
         role: 'Research analyst',
-        quote: 'The PDF agent pulled exact answers out of a sixty-page report and cited the pages. That used to take me an entire afternoon.',
-        initials: 'PN',
-        color: 'from-rose-500 to-pink-600',
+        source: 'RESEARCH ANALYST',
     },
     {
-        name: 'Lucas Martin',
-        role: 'Indie developer',
-        quote: 'The coding agent generated a complete responsive site and handed me clean files. I reviewed them, made one tweak, and shipped.',
-        initials: 'LM',
-        color: 'from-amber-500 to-orange-600',
-    },
-    {
-        name: 'Hana Sato',
-        role: 'AI product designer',
-        quote: 'It feels like one workspace instead of a pile of tabs. Conversation memory keeps the design direction consistent across follow-ups.',
-        initials: 'HS',
-        color: 'from-fuchsia-500 to-purple-600',
+        quote: 'Running local Ollama models through LiteLLM was the deciding factor. My data stays on my machine until I choose a cloud fallback.',
+        name: 'Daniel Okafor',
+        role: 'Platform engineer',
+        source: 'PLATFORM ENGINEER',
     },
 ]
 
-const stack = ['React', 'FastAPI', 'LangGraph', 'LiteLLM', 'Ollama', 'Qdrant', 'Redis', 'MongoDB']
+const faqs = [
+    {
+        question: 'Do I have to choose an agent?',
+        answer: 'No. Leave Auto selected and the router picks the specialist that fits the request. If you want control, you can still choose chat, search, coding, PDF, PPT, or vision yourself.',
+    },
+    {
+        question: 'Which models does it use?',
+        answer: 'The stack is built around LiteLLM with local Ollama models by default. You can add a cloud provider key when you want a fallback or a larger model, without changing the app flow.',
+    },
+    {
+        question: 'What can it actually produce?',
+        answer: 'Conversation answers, web-grounded research, complete code projects, styled PDF documents, slide decks, and image analysis. Generated files appear as artifacts with download links.',
+    },
+    {
+        question: 'Where do my files go?',
+        answer: 'The Docker stack includes an S3-compatible local store for generated files. Uploaded PDFs stay in the workspace and retrieval runs through Qdrant.',
+    },
+    {
+        question: 'Can I run it without cloud keys?',
+        answer: 'Yes. The project is designed to run locally with Ollama, Redis, MongoDB, Qdrant, and the bundled S3-compatible store. A demo login is available for local testing.',
+    },
+]
 
-function Stars() {
+const stack = ['React', 'FastAPI', 'LangGraph', 'LiteLLM', 'Ollama', 'Qdrant', 'Redis', 'MongoDB', 'Docker']
+
+function BrandMark() {
     return (
-        <div className='flex items-center gap-0.5 text-amber-400'>
-            {[0, 1, 2, 3, 4].map((star) => (
-                <Star key={star} size={13} className='fill-amber-400' />
-            ))}
+        <a href='#top' className='brand' aria-label='Allverse AI home'>
+            <span className='brand-dot' />
+            <span>Allverse</span>
+            <span className='brand-sub'>AI</span>
+        </a>
+    )
+}
+
+function StackMarquee() {
+    const items = [...stack, ...stack]
+    return (
+        <div className='band'>
+            <div className='marquee' aria-label={`Built on ${stack.join(', ')}`}>
+                <span className='mq-label'>Built on</span>
+                <div className='mq-clip'>
+                    <div className='mq-track'>
+                        {items.map((item, index) => (
+                            <span key={`${item}-${index}`} className='mq-item'>
+                                {item}
+                                <span className='mq-sep'>·</span>
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+function ProductPreview() {
+    return (
+        <div className='preview' aria-label='Allverse AI workspace preview'>
+            <div className='preview-top'>
+                <div className='preview-dots' aria-hidden='true'>
+                    <span />
+                    <span />
+                    <span />
+                </div>
+                <div className='preview-url mono'>allverse.local / workspace</div>
+                <span className='preview-live'>
+                    <span />
+                    live
+                </span>
+            </div>
+
+            <div className='preview-body'>
+                <aside className='preview-side'>
+                    <div className='preview-brand'>
+                        <span className='brand-dot' />
+                        Allverse
+                    </div>
+                    <div className='preview-new'>
+                        <Plus size={12} />
+                        New chat
+                    </div>
+                    <div className='preview-label mono'>Recents</div>
+                    {['Q3 launch plan', 'AWS cost audit', 'Design system'].map((item, index) => (
+                        <div key={item} className={`preview-thread ${index === 0 ? 'on' : ''}`}>
+                            <MessageSquare size={11} />
+                            {item}
+                        </div>
+                    ))}
+                    <div className='preview-side-foot'>
+                        <span className='preview-avatar'>OG</span>
+                        <span>
+                            <strong>Omkar</strong>
+                            <small>free plan</small>
+                        </span>
+                    </div>
+                </aside>
+
+                <div className='preview-main'>
+                    <div className='preview-head'>
+                        <span className='preview-title'>Q3 launch plan</span>
+                        <span className='preview-agent'>
+                            Auto
+                            <span className='preview-agent-dot' />
+                        </span>
+                    </div>
+
+                    <div className='preview-messages'>
+                        <div className='preview-msg user'>Turn this PDF into a six-slide deck and pull out the key risks.</div>
+                        <div className='preview-msg assistant'>
+                            <div className='preview-route'>
+                                <span>PDF RAG</span>
+                                <ArrowRight size={10} />
+                                <span>PPT</span>
+                            </div>
+                            <p>Read 42 pages, extracted 8 risks, and built the deck.</p>
+                            <div className='preview-checks'>
+                                {['Read 42 pages', 'Extracted 8 key risks', 'Built a 6-slide deck'].map((item) => (
+                                    <span key={item}>
+                                        <Check size={9} />
+                                        {item}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className='preview-input'>
+                        <Plus size={11} />
+                        Ask a follow-up or drop a file…
+                        <span className='preview-send'>
+                            <ArrowRight size={11} />
+                        </span>
+                    </div>
+                </div>
+
+                <aside className='preview-artifact'>
+                    <div className='preview-artifact-head mono'>
+                        Artifact
+                        <span>Ready</span>
+                    </div>
+                    <div className='preview-file'>
+                        <span className='preview-file-icon ppt'>
+                            <Presentation size={13} />
+                        </span>
+                        <div>
+                            <strong>Q3-market-review.pptx</strong>
+                            <small>6 slides · generated just now</small>
+                        </div>
+                    </div>
+                    <div className='preview-bars'>
+                        <span style={{ width: '82%' }} />
+                        <span style={{ width: '64%' }} />
+                        <span style={{ width: '92%' }} />
+                    </div>
+                    <div className='preview-file'>
+                        <span className='preview-file-icon pdf'>
+                            <FileText size={13} />
+                        </span>
+                        <div>
+                            <strong>source-summary.pdf</strong>
+                            <small>42 pages · indexed</small>
+                        </div>
+                    </div>
+                    <div className='preview-download'>
+                        <Download size={11} />
+                        Download artifacts
+                    </div>
+                </aside>
+            </div>
         </div>
     )
 }
 
 function Landing({ onLaunch, isLoggedIn }) {
-    const launchLabel = isLoggedIn ? 'Open workspace' : 'Launch app'
+    const launchLabel = isLoggedIn ? 'Open workspace' : 'Start free'
+    const [menuOpen, setMenuOpen] = useState(false)
+    const [activeStep, setActiveStep] = useState(0)
+    const [activeFaq, setActiveFaq] = useState(0)
+    const [now, setNow] = useState(() => new Date())
+
+    useEffect(() => {
+        const timer = window.setInterval(() => setNow(new Date()), 1000)
+        return () => window.clearInterval(timer)
+    }, [])
+
+    const clock = now.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+    })
 
     return (
-        <div id='top' className='min-h-screen scroll-smooth overflow-x-hidden bg-[#0d0f14] text-white'>
-            <div className='pointer-events-none fixed inset-0 overflow-hidden'>
-                <div className='absolute -top-40 left-1/2 h-[520px] w-[820px] -translate-x-1/2 rounded-full bg-indigo-600/20 blur-[140px]' />
-                <div className='absolute right-[-180px] top-[520px] h-[420px] w-[420px] rounded-full bg-violet-600/10 blur-[120px]' />
-                <div className='absolute bottom-[-200px] left-[-160px] h-[420px] w-[420px] rounded-full bg-cyan-500/10 blur-[120px]' />
+        <div id='top' className='landing-root'>
+            <div className='announce mono'>
+                <span className='announce-dot' />
+                Allverse AI v1.0
+                <span className='announce-rule'>·</span>
+                multi-agent workspace
+                <a href='#how-it-works'>See how it works</a>
             </div>
 
-            <header className='sticky top-0 z-50 border-b border-white/[0.06] bg-[#0d0f14]/85 backdrop-blur-xl'>
-                <div className='mx-auto flex max-w-6xl items-center justify-between px-5 py-4'>
-                    <a href='#top' className='flex items-center gap-2.5'>
-                        <span className='flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-700 shadow-lg shadow-indigo-500/25'>
-                            <Sparkles size={17} />
-                        </span>
-                        <span className='text-[17px] font-semibold tracking-tight'>
-                            Allverse<span className='text-indigo-400'> AI</span>
-                        </span>
-                    </a>
+            <header className='topbar'>
+                <BrandMark />
 
-                    <nav className='hidden items-center gap-8 text-[13px] font-medium text-slate-400 md:flex'>
-                        <a href='#features' className='transition-colors hover:text-white'>Why Allverse AI</a>
-                        <a href='#how-it-works' className='transition-colors hover:text-white'>How it works</a>
-                        <a href='#reviews' className='transition-colors hover:text-white'>Reviews</a>
-                    </nav>
+                <span className='built-pill' title='Local models and cloud fallbacks through one gateway'>
+                    <span className='built-pulse' />
+                    Built on LiteLLM
+                </span>
 
-                    <button
-                        onClick={onLaunch}
-                        className='flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-[13px] font-semibold text-slate-900 transition-colors duration-150 hover:bg-slate-200'
-                    >
-                        {launchLabel}
-                        <ArrowRight size={15} />
-                    </button>
+                <button
+                    type='button'
+                    className='burger'
+                    aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+                    aria-expanded={menuOpen}
+                    onClick={() => setMenuOpen((open) => !open)}
+                >
+                    {menuOpen ? <X size={16} /> : <Menu size={16} />}
+                </button>
+
+                <nav className={`nav ${menuOpen ? 'open' : ''}`} aria-label='Sections'>
+                    <a href='#features' onClick={() => setMenuOpen(false)}>Features</a>
+                    <a href='#how-it-works' onClick={() => setMenuOpen(false)}>How it works</a>
+                    <a href='#reviews' onClick={() => setMenuOpen(false)}>Reviews</a>
+                    <a href='#questions' onClick={() => setMenuOpen(false)}>Questions</a>
+                </nav>
+
+                <div className='status' role='status'>
+                    <span className='pill green'>live</span>
+                    <span className='status-meta mono'>local-first · v1.0</span>
+                    <span className='clock'>{clock}</span>
                 </div>
+
+                <button type='button' className='topbar-cta' onClick={onLaunch}>
+                    {launchLabel}
+                    <ArrowRight size={13} />
+                </button>
             </header>
 
             <main>
-                <section className='relative mx-auto max-w-6xl px-5 pb-16 pt-20 text-center md:pt-28'>
-                    <div className='mx-auto flex w-fit items-center gap-2 rounded-full border border-indigo-500/25 bg-indigo-500/10 px-3.5 py-1.5 text-[11px] font-medium tracking-wide text-indigo-300'>
-                        <Sparkles size={12} />
-                        Multi-agent AI workspace
-                    </div>
-
-                    <h1 className='mx-auto mt-6 max-w-4xl text-4xl font-semibold leading-[1.08] tracking-tight text-slate-50 sm:text-5xl md:text-6xl'>
+                <section className='hero'>
+                    <div className='eyebrow'>Allverse AI · multi-agent workspace</div>
+                    <h1 className='display hero-h'>
                         Every AI skill you need,
-                        <span className='block bg-gradient-to-r from-indigo-300 via-violet-300 to-cyan-300 bg-clip-text text-transparent'>
-                            in one calm workspace.
-                        </span>
+                        <em>in one calm workspace.</em>
                     </h1>
-
-                    <p className='mx-auto mt-6 max-w-2xl text-[15px] leading-relaxed text-slate-400 md:text-[16px]'>
-                        Allverse AI routes each request to the right specialist agent. Chat, search, code,
-                        read documents, build decks, and understand images without switching tabs or
-                        losing context.
+                    <p className='lede hero-sub'>
+                        Ask naturally. Allverse AI routes the work to the right specialist, keeps the
+                        context, and hands back answers, code, PDFs, and decks without making you
+                        juggle tabs.
                     </p>
 
-                    <div className='mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row'>
-                        <button
-                            onClick={onLaunch}
-                            className='group flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 px-6 py-3.5 text-[14px] font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all duration-150 hover:brightness-110 sm:w-auto'
-                        >
-                            Start free
-                            <ArrowRight size={16} className='transition-transform duration-150 group-hover:translate-x-0.5' />
+                    <div className='hero-cta'>
+                        <button type='button' className='btn primary' onClick={onLaunch}>
+                            {launchLabel}
+                            <ArrowRight size={15} />
                         </button>
-                        <a
-                            href='#how-it-works'
-                            className='flex w-full items-center justify-center gap-2 rounded-xl border border-white/[0.1] bg-white/[0.03] px-6 py-3.5 text-[14px] font-medium text-slate-300 transition-colors duration-150 hover:bg-white/[0.06] hover:text-white sm:w-auto'
-                        >
-                            See how it works
-                        </a>
+                        <a className='btn' href='#how-it-works'>See how it works</a>
+                        <a className='btn ghost' href='#features'>Why Allverse</a>
                     </div>
 
-                    <p className='mt-4 text-[11.5px] text-slate-600'>
-                        Local-first · OpenAI-compatible · Self-hosted with Docker
+                    <div className='hero-shot'>
+                        <div className='shot-card'>
+                            <ProductPreview />
+                        </div>
+                        <div className='ribbon-tag' aria-hidden='true'>
+                            <span className='wave'>
+                                <i />
+                                <i />
+                                <i />
+                                <i />
+                                <i />
+                            </span>
+                            auto-routed · PDF → PPT
+                        </div>
+                    </div>
+
+                    <div className='faint small'>Local-first · 8 specialist agents · Docker-ready</div>
+                </section>
+
+                <StackMarquee />
+
+                <section className='green-band'>
+                    <h2 className='display'>
+                        <em>One</em> workspace. Every answer accounted for.
+                    </h2>
+                    <p className='lede'>
+                        From the first prompt to the last artifact, the conversation keeps the thread.
+                        No tab-hopping, no lost context, no rebuilding the same brief twice.
                     </p>
 
-                    <div className='relative mx-auto mt-14 max-w-4xl rounded-2xl border border-white/[0.08] bg-[#101218]/90 p-2.5 shadow-2xl shadow-black/50'>
-                        <div className='flex items-center gap-2 border-b border-white/[0.06] px-3 py-2'>
-                            <span className='h-2.5 w-2.5 rounded-full bg-rose-500/70' />
-                            <span className='h-2.5 w-2.5 rounded-full bg-amber-500/70' />
-                            <span className='h-2.5 w-2.5 rounded-full bg-emerald-500/70' />
-                            <span className='ml-2 text-[11px] font-medium text-slate-600'>Allverse AI workspace</span>
+                    <div className='stats'>
+                        <div className='stat'>
+                            <div className='n'>8</div>
+                            <div className='l'>specialist agent modes</div>
                         </div>
-
-                        <div className='grid gap-3 p-3 text-left md:grid-cols-[1.15fr_0.85fr]'>
-                            <div className='flex flex-col gap-3 rounded-xl border border-white/[0.06] bg-[#0d0f14] p-4'>
-                                <div className='ml-auto max-w-[85%] rounded-2xl rounded-tr-sm bg-gradient-to-br from-indigo-500 to-violet-700 px-4 py-2.5 text-[12.5px] leading-relaxed text-white'>
-                                    Analyze this PDF and turn the key findings into a short slide deck.
-                                </div>
-                                <div className='flex items-center gap-2'>
-                                    <span className='rounded-full border border-indigo-500/25 bg-indigo-500/10 px-2.5 py-1 text-[10px] font-medium text-indigo-300'>
-                                        Auto
-                                    </span>
-                                    <ArrowRight size={11} className='text-slate-700' />
-                                    <span className='rounded-full border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-[10px] font-medium text-slate-400'>
-                                        PDF RAG
-                                    </span>
-                                    <ArrowRight size={11} className='text-slate-700' />
-                                    <span className='rounded-full border border-white/[0.08] bg-white/[0.04] px-2.5 py-1 text-[10px] font-medium text-slate-400'>
-                                        PPT
-                                    </span>
-                                </div>
-                                <div className='max-w-[92%] rounded-2xl rounded-tl-sm border border-white/[0.07] bg-white/[0.03] px-4 py-3 text-[12.5px] leading-relaxed text-slate-300'>
-                                    <div className='mb-2 flex items-center gap-2 text-[11px] font-medium text-slate-500'>
-                                        <BrainCircuit size={13} className='text-indigo-400' />
-                                        Working through your request
-                                    </div>
-                                    <div className='flex flex-col gap-1.5'>
-                                        {['Read 42 pages', 'Extracted 8 key insights', 'Built a 6-slide deck'].map((item) => (
-                                            <div key={item} className='flex items-center gap-2'>
-                                                <span className='flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400'>
-                                                    <Check size={10} />
-                                                </span>
-                                                {item}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                                <div className='mt-1 flex items-center gap-2 rounded-xl border border-white/[0.07] bg-[#111318] px-3 py-2.5 text-[11.5px] text-slate-600'>
-                                    <PlusIcon />
-                                    Ask a follow-up or drop a file…
-                                </div>
-                            </div>
-
-                            <div className='flex flex-col gap-2 rounded-xl border border-white/[0.06] bg-[#0d0f14] p-4'>
-                                <div className='flex items-center justify-between'>
-                                    <span className='text-[10px] font-semibold uppercase tracking-widest text-slate-600'>Artifact</span>
-                                    <span className='flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-400'>
-                                        <Check size={10} />
-                                        Ready
-                                    </span>
-                                </div>
-                                <div className='mt-2 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3'>
-                                    <div className='flex items-center gap-2'>
-                                        <span className='flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500/10 text-orange-400'>
-                                            <Presentation size={15} />
-                                        </span>
-                                        <div>
-                                            <p className='text-[12px] font-medium text-slate-200'>Q3-market-review.pptx</p>
-                                            <p className='text-[10px] text-slate-600'>6 slides · generated just now</p>
-                                        </div>
-                                    </div>
-                                    <div className='mt-3 flex flex-col gap-1.5'>
-                                        {[80, 65, 90].map((width, index) => (
-                                            <div key={index} className='h-1.5 rounded-full bg-white/[0.05]'>
-                                                <div className='h-full rounded-full bg-indigo-500/40' style={{ width: `${width}%` }} />
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                                <div className='mt-1 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3'>
-                                    <div className='flex items-center gap-2'>
-                                        <span className='flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-500/10 text-cyan-400'>
-                                            <FileText size={15} />
-                                        </span>
-                                        <div>
-                                            <p className='text-[12px] font-medium text-slate-200'>source-summary.pdf</p>
-                                            <p className='text-[10px] text-slate-600'>42 pages · indexed</p>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className='mt-auto flex items-center justify-center gap-2 rounded-lg bg-white/[0.04] py-2 text-[11px] font-medium text-slate-400'>
-                                    <Download size={12} />
-                                    Download artifacts
-                                </div>
-                            </div>
+                        <div className='stat'>
+                            <div className='n'>1</div>
+                            <div className='l'>conversation, one memory</div>
+                        </div>
+                        <div className='stat'>
+                            <div className='n'>0</div>
+                            <div className='l'>tabs to copy between</div>
                         </div>
                     </div>
 
-                    <div className='mx-auto mt-10 grid max-w-3xl grid-cols-1 gap-3 sm:grid-cols-3'>
-                        {[
-                            { value: '8', label: 'specialist agent modes' },
-                            { value: 'Local + cloud', label: 'models through LiteLLM' },
-                            { value: 'Memory + RAG', label: 'Redis and Qdrant backed' },
-                        ].map((stat) => (
-                            <div key={stat.label} className='rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3'>
-                                <p className='text-[15px] font-semibold text-slate-200'>{stat.value}</p>
-                                <p className='mt-0.5 text-[11px] text-slate-500'>{stat.label}</p>
+                    <div className='versus'>
+                        <div className='vs-card small-card'>
+                            <div className='l'>Without Allverse</div>
+                            <div className='n'>6 tabs</div>
+                            <div className='l'>chat, editor, search, slides, docs, and a folder of exports</div>
+                        </div>
+                        <div className='vs-card big-card'>
+                            <div className='vs-grid' aria-hidden='true'>
+                                {['Auto', 'Search', 'Code', 'PDF', 'PPT', 'Vision', 'Memory', 'Files'].map((item) => (
+                                    <span key={item}>{item}</span>
+                                ))}
                             </div>
-                        ))}
+                            <div className='vs-inner'>
+                                <div className='l'>With Allverse</div>
+                                <div className='n'>1 thread</div>
+                                <div className='l'>one memory, one artifact trail, on your word</div>
+                            </div>
+                        </div>
                     </div>
                 </section>
 
-                <section className='border-y border-white/[0.06] bg-white/[0.015]'>
-                    <div className='mx-auto flex max-w-6xl flex-col items-center gap-4 px-5 py-7 md:flex-row md:justify-between'>
-                        <p className='text-[10.5px] font-semibold uppercase tracking-[0.18em] text-slate-600'>
-                            Built on an open, dependable stack
-                        </p>
-                        <div className='flex flex-wrap items-center justify-center gap-2'>
-                            {stack.map((item) => (
-                                <span key={item} className='rounded-lg border border-white/[0.07] bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-slate-400'>
-                                    {item}
-                                </span>
+                <section className='section' id='how-it-works'>
+                    <div className='eyebrow center'>How it works</div>
+                    <h2 className='display center'>
+                        Three moves, <em>from question to artifact.</em>
+                    </h2>
+
+                    <div className='features'>
+                        <div className='features-list'>
+                            <ul role='tablist' aria-orientation='vertical'>
+                                {steps.map((step, index) => (
+                                    <li key={step.label}>
+                                        <button
+                                            type='button'
+                                            role='tab'
+                                            aria-selected={activeStep === index}
+                                            className={activeStep === index ? 'on' : ''}
+                                            onClick={() => setActiveStep(index)}
+                                        >
+                                            {step.label}
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+
+                            <div className='feature-card'>
+                                <div className='feature-card-top mono'>
+                                    <span>agent</span>
+                                    <span className='feature-auto'>auto</span>
+                                </div>
+                                <div className='feature-flow'>
+                                    <span>chat</span>
+                                    <span>search</span>
+                                    <span className='hot'>pdf</span>
+                                    <span className='hot'>ppt</span>
+                                    <span>code</span>
+                                </div>
+                                <div className='feature-file'>
+                                    <span className='preview-file-icon ppt'>
+                                        <Presentation size={13} />
+                                    </span>
+                                    <div>
+                                        <strong>Q3-market-review.pptx</strong>
+                                        <small>6 slides · artifact ready</small>
+                                    </div>
+                                    <Check size={13} />
+                                </div>
+                                <div className='feature-proof mono'>{steps[activeStep].proof}</div>
+                            </div>
+                        </div>
+
+                        <div className='features-steps'>
+                            {steps.map((step, index) => (
+                                <article
+                                    key={step.title}
+                                    className={`feature-step ${activeStep === index ? 'on' : ''}`}
+                                    onMouseEnter={() => setActiveStep(index)}
+                                >
+                                    <span className='feature-index mono'>0{index + 1}</span>
+                                    <h3 className='display'>{step.title}</h3>
+                                    <p className='lede'>{step.description}</p>
+                                </article>
                             ))}
                         </div>
                     </div>
                 </section>
 
-                <section id='features' className='mx-auto max-w-6xl px-5 py-20 md:py-24'>
-                    <div className='max-w-2xl'>
-                        <p className='text-[11px] font-semibold uppercase tracking-[0.18em] text-indigo-400'>Why Allverse AI</p>
-                        <h2 className='mt-3 text-3xl font-semibold tracking-tight text-slate-50 md:text-4xl'>
-                            One workspace that adapts to the work
-                        </h2>
-                        <p className='mt-4 text-[14.5px] leading-relaxed text-slate-400'>
-                            Most AI tools make you choose a model, then manage the context yourself.
-                            Allverse AI chooses the right workflow, remembers the thread, and gives you
-                            something you can actually use.
-                        </p>
-                    </div>
+                <section className='section' id='features'>
+                    <h2 className='display center'>
+                        Built around <em>how you actually work.</em>
+                    </h2>
 
-                    <div className='mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
+                    <div className='pillars'>
                         {features.map((feature) => (
-                            <article
-                                key={feature.title}
-                                className='group rounded-2xl border border-white/[0.07] bg-white/[0.025] p-5 transition-all duration-150 hover:border-indigo-500/25 hover:bg-indigo-500/[0.04]'
-                            >
-                                <div className='flex items-center justify-between'>
-                                    <span className='flex h-10 w-10 items-center justify-center rounded-xl border border-indigo-500/20 bg-indigo-500/10 text-indigo-400'>
-                                        <feature.icon size={18} />
+                            <article key={feature.title} className='pillar'>
+                                <div className='pillar-top'>
+                                    <span className='pillar-icon'>
+                                        <feature.icon size={17} />
                                     </span>
-                                    <span className='rounded-full border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[10px] font-medium text-slate-500'>
-                                        {feature.tag}
-                                    </span>
+                                    <span className='pillar-tag mono'>{feature.tag}</span>
                                 </div>
-                                <h3 className='mt-4 text-[15px] font-semibold tracking-tight text-slate-100'>{feature.title}</h3>
-                                <p className='mt-2 text-[12.5px] leading-relaxed text-slate-500'>{feature.description}</p>
+                                <h3>{feature.title}</h3>
+                                <p>{feature.description}</p>
                             </article>
                         ))}
                     </div>
+                </section>
 
-                    <div className='mt-6 grid gap-4 rounded-2xl border border-white/[0.07] bg-gradient-to-r from-indigo-500/[0.08] via-violet-500/[0.05] to-transparent p-6 md:grid-cols-3 md:p-7'>
-                        {[
-                            { icon: Layers, title: 'One workspace, not five tabs', text: 'Chat, search, code, documents, and slides share one conversation and one memory.' },
-                            { icon: Lock, title: 'Private by default', text: 'Run local models through Ollama, or add a cloud provider only when you choose to.' },
-                            { icon: Zap, title: 'Built for momentum', text: 'Auto-routing removes tool decisions so you can stay focused on the actual problem.' },
-                        ].map((item) => (
-                            <div key={item.title} className='flex gap-3'>
-                                <item.icon size={17} className='mt-0.5 shrink-0 text-indigo-400' />
-                                <div>
-                                    <p className='text-[13px] font-semibold text-slate-200'>{item.title}</p>
-                                    <p className='mt-1 text-[11.5px] leading-relaxed text-slate-500'>{item.text}</p>
-                                </div>
-                            </div>
+                <section className='section'>
+                    <div className='eyebrow center'>The workspace</div>
+                    <h2 className='display center'>
+                        Where the work <em>actually happens.</em>
+                    </h2>
+
+                    <div className='pillars four'>
+                        {workbench.map((item) => (
+                            <article key={item.title} className='pillar'>
+                                <span className='pillar-eyebrow mono'>{item.label}</span>
+                                <span className='pillar-icon small'>
+                                    <item.icon size={15} />
+                                </span>
+                                <h3>{item.title}</h3>
+                                <p>{item.description}</p>
+                            </article>
                         ))}
                     </div>
                 </section>
 
-                <section id='how-it-works' className='border-y border-white/[0.06] bg-white/[0.015]'>
-                    <div className='mx-auto max-w-6xl px-5 py-20 md:py-24'>
-                        <div className='max-w-2xl'>
-                            <p className='text-[11px] font-semibold uppercase tracking-[0.18em] text-indigo-400'>How it works</p>
-                            <h2 className='mt-3 text-3xl font-semibold tracking-tight text-slate-50 md:text-4xl'>
-                                Four steps from question to finished work
-                            </h2>
-                            <p className='mt-4 text-[14.5px] leading-relaxed text-slate-400'>
-                                No prompt engineering course, no workflow builder, and no tab juggling.
-                                Start a conversation and let the workspace do the routing.
-                            </p>
-                        </div>
+                <section className='section' id='reviews'>
+                    <div className='eyebrow center'>From the first users</div>
+                    <h2 className='display center'>
+                        Less tab-switching. <em>More finished work.</em>
+                    </h2>
 
-                        <div className='relative mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
-                            {steps.map((step) => (
-                                <div key={step.number} className='relative rounded-2xl border border-white/[0.07] bg-[#0d0f14] p-5'>
-                                    <div className='flex items-center justify-between'>
-                                        <span className='flex h-9 w-9 items-center justify-center rounded-xl border border-indigo-500/20 bg-indigo-500/10 text-indigo-400'>
-                                            <step.icon size={16} />
-                                        </span>
-                                        <span className='text-[22px] font-semibold tracking-tight text-white/[0.08]'>{step.number}</span>
-                                    </div>
-                                    <h3 className='mt-5 text-[14px] font-semibold text-slate-100'>{step.title}</h3>
-                                    <p className='mt-2 text-[12px] leading-relaxed text-slate-500'>{step.description}</p>
+                    <div className='quotes'>
+                        {quotes.map((quote) => (
+                            <figure key={quote.name} className='quote-card'>
+                                <div className='quote-stars'>
+                                    {[0, 1, 2, 3, 4].map((star) => (
+                                        <Star key={star} size={12} className='fill-current' />
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
-                    </div>
-                </section>
-
-                <section id='reviews' className='mx-auto max-w-6xl px-5 py-20 md:py-24'>
-                    <div className='flex flex-col gap-4 md:flex-row md:items-end md:justify-between'>
-                        <div className='max-w-2xl'>
-                            <p className='text-[11px] font-semibold uppercase tracking-[0.18em] text-indigo-400'>Reviews</p>
-                            <h2 className='mt-3 text-3xl font-semibold tracking-tight text-slate-50 md:text-4xl'>
-                                People are getting more done
-                            </h2>
-                            <p className='mt-4 text-[14.5px] leading-relaxed text-slate-400'>
-                                Feedback from developers, founders, and researchers testing the Allverse AI preview.
-                            </p>
-                        </div>
-                        <div className='flex items-center gap-3 rounded-xl border border-white/[0.07] bg-white/[0.025] px-4 py-3'>
-                            <div className='flex -space-x-2'>
-                                {reviews.slice(0, 3).map((review) => (
-                                    <span key={review.name} className={`flex h-7 w-7 items-center justify-center rounded-full border-2 border-[#0d0f14] bg-gradient-to-br ${review.color} text-[9px] font-semibold text-white`}>
-                                        {review.initials}
-                                    </span>
-                                ))}
-                            </div>
-                            <div>
-                                <Stars />
-                                <p className='mt-1 text-[10.5px] text-slate-500'>Rated 5/5 by preview users</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className='mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
-                        {reviews.map((review) => (
-                            <figure key={review.name} className='flex flex-col rounded-2xl border border-white/[0.07] bg-white/[0.025] p-5'>
-                                <Stars />
-                                <blockquote className='mt-4 flex-1 text-[13px] leading-relaxed text-slate-300'>
-                                    “{review.quote}”
-                                </blockquote>
-                                <figcaption className='mt-5 flex items-center gap-3 border-t border-white/[0.05] pt-4'>
-                                    <span className={`flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br ${review.color} text-[11px] font-semibold text-white`}>
-                                        {review.initials}
-                                    </span>
-                                    <div>
-                                        <p className='text-[12.5px] font-medium text-slate-200'>{review.name}</p>
-                                        <p className='text-[10.5px] text-slate-600'>{review.role}</p>
-                                    </div>
+                                <blockquote>“{quote.quote}”</blockquote>
+                                <figcaption>
+                                    <span className='quote-source mono'>{quote.source}</span>
+                                    <span className='quote-name'>{quote.name} · {quote.role}</span>
                                 </figcaption>
                             </figure>
                         ))}
                     </div>
                 </section>
 
-                <section className='mx-auto max-w-6xl px-5 pb-20'>
-                    <div className='relative overflow-hidden rounded-3xl border border-indigo-500/20 bg-gradient-to-br from-indigo-500/[0.12] via-violet-500/[0.07] to-[#0d0f14] px-6 py-12 text-center md:px-12 md:py-16'>
-                        <div className='pointer-events-none absolute -top-32 left-1/2 h-64 w-[560px] -translate-x-1/2 rounded-full bg-indigo-500/20 blur-[100px]' />
-                        <div className='relative'>
-                            <span className='mx-auto flex h-11 w-11 items-center justify-center rounded-2xl border border-indigo-500/25 bg-indigo-500/10 text-indigo-300'>
-                                <Sparkles size={19} />
-                            </span>
-                            <h2 className='mx-auto mt-5 max-w-xl text-3xl font-semibold tracking-tight text-slate-50 md:text-4xl'>
-                                Stop juggling tools. Start one conversation.
-                            </h2>
-                            <p className='mx-auto mt-4 max-w-lg text-[14px] leading-relaxed text-slate-400'>
-                                Bring your questions, documents, and ideas. Allverse AI brings the agents,
-                                the memory, and the finished artifacts.
-                            </p>
-                            <button
-                                onClick={onLaunch}
-                                className='group mx-auto mt-7 flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3.5 text-[14px] font-semibold text-slate-900 transition-colors duration-150 hover:bg-slate-200'
-                            >
-                                {isLoggedIn ? 'Return to workspace' : 'Launch Allverse AI'}
-                                <ArrowRight size={16} className='transition-transform duration-150 group-hover:translate-x-0.5' />
-                            </button>
+                <section className='section' id='questions'>
+                    <div className='eyebrow center'>FAQs</div>
+                    <h2 className='display center'>Good questions.</h2>
+
+                    <div className='faq'>
+                        <div className='faq-list'>
+                            {faqs.map((faq, index) => (
+                                <button
+                                    key={faq.question}
+                                    type='button'
+                                    className={activeFaq === index ? 'on' : ''}
+                                    onClick={() => setActiveFaq(index)}
+                                >
+                                    <span>{faq.question}</span>
+                                    <Plus size={14} />
+                                </button>
+                            ))}
                         </div>
+                        <div className='faq-answer'>
+                            <div className='faq-answer-top mono'>
+                                <span>{faqs[activeFaq].question}</span>
+                                <span>answer</span>
+                            </div>
+                            <p>{faqs[activeFaq].answer}</p>
+                            <span className='faq-check'>
+                                <Check size={13} />
+                            </span>
+                        </div>
+                    </div>
+                </section>
+
+                <section className='section cta'>
+                    <span className='cta-icon'>
+                        <Sparkles size={18} />
+                    </span>
+                    <h2 className='display'>
+                        Ready for <em>less tab-switching?</em>
+                    </h2>
+                    <p className='lede'>
+                        Bring the question, the document, or the half-formed idea. Allverse AI brings
+                        the agents, the memory, and the finished artifacts.
+                    </p>
+                    <div className='hero-cta'>
+                        <button type='button' className='btn primary' onClick={onLaunch}>
+                            {isLoggedIn ? 'Return to workspace' : 'Launch Allverse AI'}
+                            <ArrowRight size={15} />
+                        </button>
+                        <a className='btn' href='#how-it-works'>See how it works</a>
                     </div>
                 </section>
             </main>
 
-            <footer className='border-t border-white/[0.06]'>
-                <div className='mx-auto flex max-w-6xl flex-col gap-6 px-5 py-8 md:flex-row md:items-center md:justify-between'>
-                    <div className='flex items-center gap-2.5'>
-                        <span className='flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-700'>
-                            <Sparkles size={14} />
-                        </span>
-                        <div>
-                            <p className='text-[13px] font-semibold tracking-tight'>Allverse AI</p>
-                            <p className='text-[10.5px] text-slate-600'>Multi-agent AI workspace</p>
-                        </div>
+            <footer className='footer'>
+                <div className='footer-grid'>
+                    <div className='footer-brand'>
+                        <BrandMark />
+                        <p>A multi-agent AI workspace for questions, documents, code, and the work that comes after.</p>
+                        <span className='mono'>Local-first · built to self-host</span>
                     </div>
-                    <div className='flex flex-wrap items-center gap-5 text-[11.5px] text-slate-500'>
-                        <a href='#features' className='transition-colors hover:text-slate-200'>Features</a>
-                        <a href='#how-it-works' className='transition-colors hover:text-slate-200'>How it works</a>
-                        <a href='#reviews' className='transition-colors hover:text-slate-200'>Reviews</a>
-                        <a href='#top' className='transition-colors hover:text-slate-200'>Back to top</a>
+
+                    <div className='footer-col'>
+                        <span className='footer-head mono'>Product</span>
+                        <a href='#features'>Features</a>
+                        <a href='#how-it-works'>How it works</a>
+                        <a href='#reviews'>Reviews</a>
+                        <a href='#questions'>FAQs</a>
                     </div>
-                    <p className='text-[10.5px] text-slate-600'>Built with React, FastAPI, LangGraph, LiteLLM, Qdrant, and Redis.</p>
+
+                    <div className='footer-col'>
+                        <span className='footer-head mono'>Run it</span>
+                        <a href='#top'>Docker setup</a>
+                        <a href='#top'>Local models</a>
+                        <a href='#top'>API gateway</a>
+                        <a href='#top'>README</a>
+                    </div>
+
+                    <div className='footer-col'>
+                        <span className='footer-head mono'>Trust</span>
+                        <a href='#features'>Local-first</a>
+                        <a href='#features'>Data handling</a>
+                        <a href='#questions'>Security notes</a>
+                    </div>
+
+                    <div className='footer-col'>
+                        <span className='footer-head mono'>Project</span>
+                        <a href='#top'>GitHub</a>
+                        <a href='#top'>Release notes</a>
+                        <a href='#top'>Contact</a>
+                    </div>
+                </div>
+
+                <div className='footer-wordmark'>Allverse</div>
+
+                <div className='footer-bottom mono'>
+                    <span>© Allverse AI · multi-agent workspace</span>
+                    <span className='footer-shortcuts'>
+                        <a href='#top'>home</a>
+                        <a href='#features'>features</a>
+                        <a href='#questions'>help</a>
+                    </span>
                 </div>
             </footer>
-        </div>
-    )
-}
 
-function PlusIcon() {
-    return (
-        <span className='flex h-5 w-5 items-center justify-center rounded-md bg-white/[0.05] text-slate-600'>
-            <span className='text-[13px] leading-none'>+</span>
-        </span>
+            <button type='button' className='side-label' aria-label='Open the workspace' onClick={onLaunch}>
+                <Sparkles size={13} />
+                What is this?
+            </button>
+        </div>
     )
 }
 

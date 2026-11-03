@@ -3,28 +3,28 @@ PDF RAG Agent — mirrors agents/pdfRag.agent.js.
 
 Flow:
   1. Read uploaded PDF with pypdf
-  2. Split into chunks (RecursiveCharacterTextSplitter)
-  3. Embed + store in Qdrant (temporary collection)
-  4. Similarity search for user's question
-  5. LLM answers from retrieved context
-  6. Delete temp file in finally block
+  2. Pass the extracted text directly as context to the chat model
+  3. Answer strictly from the uploaded document
+  4. Delete the temp file in finally block
+
+Direct context is used instead of a vector store so PDF analysis works without
+requiring a separate embedding model to be installed locally.
 """
 
 import logging
 import os
-import time
 
 from langchain_community.document_loaders import PyPDFLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from config.llm_models import get_model
 from config.rate_limit import check_rate_limit
-from config.vector_db import build_vector_store
 from utils.deduct_credits import deduct_credits
 from graph.state import AgentState
 
 logger = logging.getLogger(__name__)
+
+MAX_CONTEXT_CHARS = 30000
 
 PDF_RAG_SYSTEM = """You are Allverse AI PDF Assistant.
 
@@ -42,25 +42,16 @@ async def pdf_rag_agent(state: AgentState) -> AgentState:
     try:
         await check_rate_limit(state["user_id"], "pdf")
 
-        # 1. Load PDF
         loader = PyPDFLoader(file_path)
-        pages  = loader.load()
+        pages = loader.load()
+        text = "\n\n".join(page.page_content for page in pages).strip()
+        if not text:
+            return {
+                **state,
+                "ai_response": "I couldn't extract any text from the uploaded PDF. It may be a scanned document.",
+            }
 
-        # 2. Split into chunks
-        splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000, chunk_overlap=200
-        )
-        docs = splitter.split_documents(pages)
-
-        # 3. Embed + store in Qdrant
-        collection_name = f"pdf-{int(time.time() * 1000)}"
-        store = await build_vector_store(docs, collection_name)
-
-        # 4. Similarity search
-        relevant = await store.asimilarity_search(state["prompt"], k=5)
-        context  = "\n\n".join(d.page_content for d in relevant)
-
-        # 5. LLM answer
+        context = text[:MAX_CONTEXT_CHARS]
         llm = get_model("pdf_rag")
         messages = [
             SystemMessage(content=PDF_RAG_SYSTEM),
@@ -84,4 +75,3 @@ async def pdf_rag_agent(state: AgentState) -> AgentState:
                 os.unlink(file_path)
             except Exception:
                 pass
-

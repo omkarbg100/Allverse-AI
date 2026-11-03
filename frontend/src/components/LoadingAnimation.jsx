@@ -1,18 +1,19 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from "motion/react"
-function LoadingAnimation() {
 
-    const Thinking_Lables = ["Thinking", "Analyzing", "Reasoning", "Generating"]
+const THINKING_LABELS = ["Thinking", "Analyzing", "Reasoning", "Generating"]
+
+function LoadingAnimation() {
     const [labelIndex, setLabelIndex] = useState(0)
 
     useEffect(() => {
         const interval = setInterval(() => {
-            setLabelIndex((prev) => (prev + 1) % Thinking_Lables.length)
+            setLabelIndex((prev) => (prev + 1) % THINKING_LABELS.length)
         }, 1800)
         return () => clearInterval(interval)
     }, [])
 
-    const label = Thinking_Lables[labelIndex]
+    const label = THINKING_LABELS[labelIndex]
 
     return (
         <div className='flex items-center gap-3 max-w-[72%] py-1'>
@@ -21,7 +22,7 @@ function LoadingAnimation() {
                     [0, 0.45, 0.9].map((delay, i) => (
                         <motion.div
                             key={i}
-                            className="absolute inset-0 rounded-full border border-cyan-400/30"
+                            className="absolute inset-0 rounded-full border border-[#034f46]/30"
                             initial={{ scale: 0.3, opacity: 0.55 }}
                             animate={{ scale: 1.7, opacity: 0 }}
                             transition={{
@@ -36,8 +37,8 @@ function LoadingAnimation() {
                 }
 
                 <motion.span
-                    className="w-2.5 h-2.5 rounded-full bg-gradient-to-br from-cyan-300 to-violet-400"
-                    style={{ boxShadow: "0 0 14px rgba(125,211,252,0.55)" }}
+                    className="w-2.5 h-2.5 rounded-full bg-[#ff6c4c]"
+                    style={{ boxShadow: "0 0 14px rgba(255,108,76,0.45)" }}
                     animate={{ scale: [1, 1.25, 1] }}
                     transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
 
@@ -58,7 +59,7 @@ function LoadingAnimation() {
                             label.split("").map((ch, i) => (
                                 <motion.div
                                     key={i}
-                                    className="text-[13px] font-medium tracking-wide text-slate-400"
+                                    className="workspace-mono text-[11px] font-medium uppercase tracking-[0.14em] text-[#1a1a1a]/45"
                                     animate={{ opacity: [0.3, 1, 0.3] }}
                                     transition={{
                                         duration: 1.4,

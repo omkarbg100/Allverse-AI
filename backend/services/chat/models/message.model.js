@@ -7,6 +7,14 @@ const fileSchema=new mongoose.Schema({
     _id:false
 })
 
+const attachmentSchema=new mongoose.Schema({
+    name:String,
+    type:String,
+    size:Number
+},{
+    _id:false
+})
+
 const artifactSchema=new mongoose.Schema({
     id:Number,
     type:String,
@@ -29,6 +37,7 @@ const messageSchema=new mongoose.Schema({
     },
     content:String,
     images:[String],
+    attachments:[attachmentSchema],
     artifacts:[artifactSchema]
 
 },{

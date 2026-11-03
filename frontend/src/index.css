@@ -1,1 +1,39 @@
 @import "tailwindcss";
+
+.auth-display {
+    font-family: "EB Garamond", Georgia, serif;
+    font-weight: 400;
+    letter-spacing: -0.02em;
+}
+
+.workspace-root {
+    font-family: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+
+.workspace-root ::selection {
+    background: #f0d7ff;
+    color: #1a1a1a;
+}
+
+.workspace-root button:focus-visible,
+.workspace-root a:focus-visible {
+    outline: 2px solid #034f46;
+    outline-offset: 2px;
+}
+
+.workspace-display {
+    font-family: "EB Garamond", "Iowan Old Style", Georgia, serif;
+    font-weight: 400;
+    letter-spacing: -0.02em;
+}
+
+.workspace-mono {
+    font-family: "Geist Mono", "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    font-variant-numeric: tabular-nums;
+}
+
+.workspace-root textarea::placeholder {
+    color: rgba(26, 26, 26, 0.3);
+}

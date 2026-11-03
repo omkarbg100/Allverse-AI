@@ -18,6 +18,10 @@ from graph.state import AgentState
 
 logger = logging.getLogger(__name__)
 
+PDF_REWRITE_PATTERN = re.compile(
+    r"\b(?:rewrite|revise|update|edit|improve|tailor|generate|create|make|draft|prepare|format)\b"
+)
+
 ROUTE_RULES: list[tuple[str, tuple[re.Pattern, ...]]] = [
     (
         "pdf",
@@ -93,6 +97,8 @@ async def router_node(state: AgentState) -> AgentState:
     if state.get("file"):
         mime = state["file"].get("mimetype", "")
         if mime == "application/pdf":
+            if PDF_REWRITE_PATTERN.search(state["prompt"].lower()):
+                return {**state, "agent": "pdf"}
             return {**state, "agent": "pdf_rag"}
         if mime.startswith("image/"):
             return {**state, "agent": "image_analyzer"}

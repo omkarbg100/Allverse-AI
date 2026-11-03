@@ -27,7 +27,8 @@ TEMP_DIR.mkdir(exist_ok=True)
 
 
 async def _save_message(conversation_id: str, role: str, content: str,
-                        images: list | None = None, artifacts: list | None = None):
+                        images: list | None = None, artifacts: list | None = None,
+                        attachments: list | None = None):
     """POST to CHAT_SERVICE /save-message"""
     try:
         async with httpx.AsyncClient(timeout=5) as client:
@@ -38,6 +39,7 @@ async def _save_message(conversation_id: str, role: str, content: str,
                     "role":           role,
                     "content":        content,
                     "images":         images,
+                    "attachments":    attachments,
                     "artifacts":      artifacts,
                 },
             )
@@ -68,10 +70,17 @@ async def handle_agent(
             "path":     str(file_path),
             "mimetype": file.content_type or "application/octet-stream",
             "filename": file.filename,
+            "size":     len(content),
         }
 
+    attachments = [{
+        "name": file_meta["filename"],
+        "type": file_meta["mimetype"],
+        "size": file_meta["size"],
+    }] if file_meta else None
+
     # ── 2. Save user message to chat service ───────────────────────
-    await _save_message(conversation_id, "user", prompt)
+    await _save_message(conversation_id, "user", prompt, attachments=attachments)
 
     # ── 3. Invoke LangGraph ────────────────────────────────────────
     result = await graph.ainvoke(
