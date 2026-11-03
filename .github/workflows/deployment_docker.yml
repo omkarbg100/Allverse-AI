@@ -1,0 +1,95 @@
+name: allverse ai docker deployment
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  SSH_HOST: ${{ secrets.DOCKER_HOST }}
+  SSH_USER: ${{ secrets.DOCKER_USER }}
+  SSH_PORT: ${{ secrets.DOCKER_PORT || '22' }}
+  DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/opt/allverse-ai' }}
+
+jobs:
+  deploy-docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DOCKER_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "$SSH_PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Prepare deploy directory
+        run: |
+          ssh -p "$SSH_PORT" -i ~/.ssh/id_ed25519 "$SSH_USER@$SSH_HOST" \
+            "mkdir -p '$DEPLOY_PATH'"
+
+      - name: Sync source to Docker host
+        run: |
+          rsync -az --delete \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='node_modules' \
+            --exclude='**/node_modules' \
+            --exclude='__pycache__' \
+            --exclude='*.pyc' \
+            --exclude='.env' \
+            --exclude='**/.env' \
+            --exclude='frontend/dist' \
+            --exclude='backend/services/agent/temp' \
+            -e "ssh -p $SSH_PORT -i ~/.ssh/id_ed25519" \
+            ./ "$SSH_USER@$SSH_HOST:$DEPLOY_PATH/"
+
+      - name: Deploy with Docker Compose
+        run: |
+          ssh -p "$SSH_PORT" -i ~/.ssh/id_ed25519 "$SSH_USER@$SSH_HOST" \
+            "DEPLOY_PATH='$DEPLOY_PATH' bash -s" <<'REMOTE'
+          set -euo pipefail
+          cd "$DEPLOY_PATH"
+
+          for f in \
+            .env \
+            backend/gateway/.env \
+            backend/services/auth/.env \
+            backend/services/chat/.env \
+            backend/services/billing/.env \
+            backend/services/agent/.env
+          do
+            if [ ! -f "$f" ]; then
+              echo "Missing required env file: $DEPLOY_PATH/$f"
+              exit 1
+            fi
+          done
+
+          docker compose build --pull
+          docker compose up -d --remove-orphans
+          docker image prune -f
+          REMOTE
+
+      - name: Health check
+        run: |
+          ssh -p "$SSH_PORT" -i ~/.ssh/id_ed25519 "$SSH_USER@$SSH_HOST" \
+            "DEPLOY_PATH='$DEPLOY_PATH' bash -s" <<'REMOTE'
+          set -euo pipefail
+          cd "$DEPLOY_PATH"
+
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8000/ >/dev/null; then
+              echo "Gateway is healthy"
+              exit 0
+            fi
+            sleep 5
+          done
+
+          echo "Gateway health check failed"
+          docker compose ps
+          docker compose logs --tail 100
+          exit 1
+          REMOTE
