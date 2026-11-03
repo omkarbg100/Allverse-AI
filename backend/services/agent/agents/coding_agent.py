@@ -95,6 +95,16 @@ Rules:
 User Request:
 """
 
+CODE_FALLBACK_PROMPT = """You are Allverse AI Coding Agent.
+
+Return Markdown only.
+Provide the complete, working code in fenced code blocks.
+Keep the explanation short and say how to run it.
+
+User Request:
+
+"""
+
 REVIEW_PROMPT = """The user's request intent is: {intent}
 
 Return Markdown only.
@@ -133,25 +143,38 @@ async def coding_agent(state: AgentState) -> AgentState:
         logger.info("coding_agent intent: %s", intent)
 
         if intent == "CODE_GENERATION":
-            data = await invoke_json(
-                code_llm,
-                CODE_GEN_PROMPT + state["prompt"],
-                '{"files":[{"name":"index.html","content":""}]}',
-            )
-            await deduct_credits(state["user_id"], "coding")
+            files = []
+            try:
+                data = await invoke_json(
+                    code_llm,
+                    CODE_GEN_PROMPT + state["prompt"],
+                    '{"files":[{"name":"index.html","content":""}]}',
+                )
+                files = [
+                    f for f in data.get("files", [])
+                    if isinstance(f, dict) and str(f.get("content", "")).strip()
+                ]
+            except Exception as e:
+                logger.warning("coding_agent JSON generation failed: %s", e)
 
-            return {
-                **state,
-                "ai_response": "Code Generated Successfully.",
-                "artifacts": [
-                    {
-                        "id": int(time.time() * 1000),
-                        "type": "Project",
-                        "files": data.get("files", []),
-                        "title": state["prompt"],
-                    }
-                ],
-            }
+            if files:
+                await deduct_credits(state["user_id"], "coding")
+                return {
+                    **state,
+                    "ai_response": "Code Generated Successfully.",
+                    "artifacts": [
+                        {
+                            "id": int(time.time() * 1000),
+                            "type": "Project",
+                            "files": files,
+                            "title": state["prompt"],
+                        }
+                    ],
+                }
+
+            res = await code_llm.ainvoke(CODE_FALLBACK_PROMPT + state["prompt"])
+            await deduct_credits(state["user_id"], "coding")
+            return {**state, "ai_response": res.content, "artifacts": []}
 
         # All other intents — Markdown explanation
         res = await code_llm.ainvoke(

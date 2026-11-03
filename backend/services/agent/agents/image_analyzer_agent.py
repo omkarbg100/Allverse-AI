@@ -4,7 +4,7 @@ Image Analyzer Agent — mirrors agents/imageAnalyzer.agent.js.
 Flow:
   1. Read uploaded image file
   2. Base64-encode it
-  3. Send to vision LLM (Ollama llava / Groq vision) as multimodal message
+  3. Send to the configured vision-capable LLM as a multimodal message
   4. Delete temp file in finally block
 """
 
