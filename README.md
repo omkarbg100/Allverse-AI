@@ -1,687 +1,509 @@
-# Allverse AI — Multi-Agent AI Platform
+# Allverse AI — Multi-Agent AI Workspace
 
 <p align="center">
-  <strong>An intelligent multi-agent workspace for chat, search, coding, and document-based AI workflows.</strong>
+  <strong>Every AI skill you need, in one calm workspace.</strong>
 </p>
 
 <p align="center">
-  Built with MERN, LangChain, LangGraph, Qdrant, Redis, Firebase, and a microservices architecture.
+  React frontend · Node.js microservices · Python LangGraph agent service · LiteLLM · local Ollama
+</p>
+
+---
+
+## Screenshots
+
+<p align="center">
+  <img src="data/image.png" alt="Allverse AI landing page" width="900" />
+</p>
+
+<p align="center">
+  <em>Landing page — one workspace for chat, code, documents, decks, images, and search.</em>
+</p>
+
+<p align="center">
+  <img src="data/image%20copy.png" alt="Allverse AI multi-agent chat workspace" width="900" />
+</p>
+
+<p align="center">
+  <em>Chat workspace — Auto routing plus Chat, Coding, PDF, PPT, Vision, and Search modes.</em>
 </p>
 
 ---
 
 ## Overview
 
-**Allverse AI** is a production-style Multi-Agent AI Platform that brings multiple specialized AI capabilities into a single conversational workspace.
+**Allverse AI** is a multi-agent AI platform that combines several specialized AI workflows in a single chat workspace.
 
-Instead of relying on a single AI workflow, Allverse AI uses specialized agents that can route tasks based on the user's intent. The platform can handle general conversations, search and summarize information, work with retrieved knowledge, and assist with coding tasks.
+A user request enters through the React frontend and the API Gateway, then a LangGraph router sends it to the right specialist agent. Agents can call a local LLM through a LiteLLM gateway, use web search, generate documents and presentations, create images, or read uploaded PDFs.
 
-The system is designed around a scalable **microservices architecture**, with dedicated services for authentication, conversations, agent orchestration, and supporting infrastructure.
+The platform is built as a set of independently deployable services:
+
+- **React + Vite frontend** for the workspace UI
+- **Node.js / Express microservices** for auth, chat, billing, and API routing
+- **Python FastAPI service** for LangChain / LangGraph agent orchestration
+- **LiteLLM** as a unified OpenAI-compatible model gateway
+- **Ollama** for local model inference
+- **MongoDB, Redis, Qdrant, and S3-compatible storage** for persistence, memory, retrieval, and files
+
+The project is configured to run with one local Ollama model, `llama3.2:3b`, used by every agent.
 
 ---
 
-## ✨ Key Features
+## Features
 
-### 🤖 Multi-Agent AI
+### Multi-agent orchestration
 
-Allverse AI uses specialized agents coordinated through LangGraph and LangChain.
+- LangGraph state graph with a deterministic router
+- Auto-routing based on uploaded file type and prompt keywords
+- Manual agent selection from the UI
+- Shared conversation memory across agents
 
-- **Chat Agent** — Handles general conversational requests
-- **Search Agent** — Retrieves and summarizes web information
-- **Coding Agent** — Assists with code generation and development tasks
-- Intelligent routing between specialized agents
-- Conditional multi-agent workflows
-- Agent-to-agent workflow orchestration
+### Specialized agents
 
-### 🔎 AI Search & RAG
+- **Chat** — general conversation and explanations
+- **Search** — Tavily web search followed by an AI summary
+- **Coding** — code generation, review, debugging, and explanation
+- **PDF** — generates downloadable PDF documents
+- **PPT** — generates downloadable PowerPoint decks
+- **Vision** — creates images from text prompts
+- **PDF RAG** — answers questions from an uploaded PDF
+- **Image Analyzer** — analyzes an uploaded image with a vision-capable model
 
-The Search Agent combines retrieval with AI generation to provide context-aware responses.
+### Artifacts and file handling
 
-- Web data retrieval
-- Document retrieval
-- Semantic search
-- Embedding-based retrieval
-- Retrieval-Augmented Generation
-- Context-aware AI responses
-- Qdrant vector database
+- Uploaded PDFs and images handled with multipart form data
+- Generated PDF, PPTX, and image files stored in S3-compatible storage
+- Time-limited presigned download links
+- Generated code returned as project artifacts or Markdown
 
-### 🧠 AI Memory
+### AI infrastructure
 
-Redis provides short-term session and conversation memory.
+- LiteLLM gateway with OpenAI-compatible API
+- Local Ollama inference through `llama3.2:3b`
+- Optional Groq fallback configuration
+- Per-agent Redis rate limiting
+- Redis conversation memory
+- Qdrant vector store available for retrieval workflows
 
-- Session management
-- Conversation context
-- Short-term AI memory
-- Fast state retrieval
-- Cross-service session continuity
-
-### 💬 AI Chat Workspace
-
-The frontend provides a modern ChatGPT-style experience.
-
-- Streaming AI responses
-- Conversation history
-- Markdown rendering
-- Responsive sidebar
-- Multi-session conversations
-- Specialized AI modes
-
-### 💻 Coding Assistance
-
-The Coding Agent helps developers work with code using natural-language instructions.
-
-- Code generation
-- Code explanation
-- Refactoring assistance
-- Development questions
-- AI-powered coding workflows
-
-### 🔐 Authentication
-
-Secure authentication supports Firebase Google sign-in and email/password accounts in parallel.
+### Authentication
 
 - Email/password registration and login with scrypt password hashing
-- Firebase Google sign-in
-- Protected routes
-- Session-based authorization with Redis
-- Secure service communication
-- Multi-user support
+- Firebase Google sign-in support
+- Demo login for local development
+- Cookie-based sessions stored in Redis
+- Protected gateway routes with user ID forwarding
 
-### ⚙️ Microservices Architecture
+### Platform
 
-The backend is separated into independent services.
-
-- Auth Service
-- Chat Service
-- Agent Service
-- Billing Service
-- API Gateway
-- Independent service deployment
-- Container-ready architecture
-
-### 🐳 Containerized Infrastructure
-
-Services can be containerized and managed using Docker.
-
-- Docker support
-- Docker Compose
-- Independent services
-- Local multi-service development
-- Cloud deployment readiness
+- Docker Compose full-stack startup
+- Health-checkable services
+- Pure local mode: no paid AI API required for chat
+- Optional Tavily, Groq, Firebase, and Razorpay integrations
 
 ---
 
-# 🏗️ System Architecture
+## Architecture
 
 ```text
-                         ┌──────────────────────┐
-                         │      Allverse AI     │
-                         │   React + Redux UI   │
-                         └──────────┬───────────┘
-                                    │
-                                    ▼
-                         ┌──────────────────────┐
-                         │     API Gateway      │
-                         │  Request Routing     │
-                         └──────────┬───────────┘
-                                    │
-             ┌──────────────────────┼──────────────────────┐
-             │                      │                      │
-             ▼                      ▼                      ▼
-      ┌─────────────┐       ┌─────────────┐       ┌─────────────┐
-      │    Auth     │       │    Chat     │       │    Agent    │
-      │   Service   │       │   Service   │       │   Service   │
-      └─────────────┘       └──────┬──────┘       └──────┬──────┘
-                                   │                      │
-                                   │                      ▼
-                                   │              ┌──────────────┐
-                                   │              │  LangGraph   │
-                                   │              │ Orchestrator │
-                                   │              └──────┬───────┘
-                                   │                     │
-                                   │          ┌──────────┼──────────┐
-                                   │          │          │          │
-                                   │          ▼          ▼          ▼
-                                   │       Chat       Search     Coding
-                                   │       Agent       Agent      Agent
-                                   │                     │
-                                   │                     ▼
-                                   │              ┌──────────────┐
-                                   │              │    Qdrant    │
-                                   │              │ Vector Store │
-                                   │              └──────────────┘
-                                   │
-                                   ▼
-                            ┌──────────────┐
-                            │    Redis     │
-                            │ Session & AI │
-                            │    Memory    │
-                            └──────────────┘
-
-                            ┌──────────────┐
-                            │   MongoDB    │
-                            │ Application  │
-                            │     Data     │
-                            └──────────────┘
+                         ┌──────────────────────────┐
+                         │        React + Vite      │
+                         │        Frontend :5173    │
+                         └────────────┬─────────────┘
+                                      │
+                                      ▼
+                         ┌──────────────────────────┐
+                         │       API Gateway        │
+                         │         :8000            │
+                         └────────────┬─────────────┘
+                                      │
+        ┌──────────────┬──────────────┼──────────────┐
+        │              │              │              │
+        ▼              ▼              ▼              ▼
+   ┌─────────┐   ┌──────────┐   ┌───────────┐  ┌─────────┐
+   │  Auth   │   │   Chat   │   │  Billing  │  │  Agent  │
+   │  :8001  │   │  :8002   │   │   :8004   │  │  :8003  │
+   └────┬────┘   └────┬─────┘   └─────┬─────┘  └────┬────┘
+        │             │               │             │
+        ▼             ▼               ▼             ▼
+   ┌─────────┐   ┌──────────┐   ┌───────────┐  ┌─────────────┐
+   │ MongoDB │   │  Redis   │   │ Razorpay  │  │  LangGraph  │
+   └─────────┘   └──────────┘   └───────────┘  │ Orchestrator│
+                                                └──────┬──────┘
+                                                       │
+                                                       ▼
+                                                ┌─────────────┐
+                                                │   LiteLLM   │
+                                                │    :4000    │
+                                                └──────┬──────┘
+                                                       │
+                          ┌────────────────────────────┼─────────────────────────┐
+                          ▼                            ▼                         ▼
+                   ┌─────────────┐              ┌─────────────┐           ┌─────────────┐
+                   │   Ollama    │              │    Groq     │           │   Tavily    │
+                   │ llama3.2:3b │              │  (optional) │           │  (optional) │
+                   └─────────────┘              └─────────────┘           └─────────────┘
+                                                       │
+                                         ┌─────────────┼─────────────┐
+                                         ▼             ▼             ▼
+                                   ┌──────────┐ ┌───────────┐ ┌─────────────┐
+                                   │  Qdrant  │ │ S3 Mock   │ │   Redis     │
+                                   │  :6333   │ │   :9000   │ │   Memory    │
+                                   └──────────┘ └───────────┘ └─────────────┘
 ```
 
 ---
 
-# 🧠 Agent Orchestration
+## Agent Routing
 
-LangGraph is responsible for managing the agent workflow.
+The router is deterministic and runs inside the LangGraph workflow.
 
-A request enters the platform through the API Gateway and is routed to the appropriate agent workflow.
-
-```text
-User Request
-     │
-     ▼
-API Gateway
-     │
-     ▼
-Agent Router
-     │
-     ├───────────────┐
-     │               │
-     ▼               ▼
-  Simple          Specialized
-  Request           Request
-     │               │
-     ▼               ▼
- Chat Agent    ┌──────┼──────┐
-               │      │      │
-               ▼      ▼      ▼
-            Search  Coding   RAG
-             Agent   Agent  Workflow
-```
-
-This architecture allows Allverse AI to dynamically select the appropriate workflow instead of using the same processing pipeline for every request.
-
----
-
-# 🔎 Retrieval-Augmented Generation
-
-Allverse AI uses **Qdrant** as the vector database for semantic retrieval.
-
-The general RAG workflow is:
-
-```text
-Documents / Web Data
-        │
-        ▼
-    Processing
-        │
-        ▼
-    Embeddings
-        │
-        ▼
-     Qdrant
-        │
-        ▼
- Semantic Retrieval
-        │
-        ▼
- Retrieved Context
-        │
-        ▼
-     AI / LLM
-        │
-        ▼
-    Final Answer
-```
-
-This allows the platform to retrieve relevant information before generating an AI response.
-
----
-
-# ⚡ Redis Session & Memory
-
-Redis provides fast storage for short-lived application state and AI conversation context.
-
-```text
-User Request
-     │
-     ▼
-API Gateway
-     │
-     ▼
-Session Lookup
-     │
-     ▼
-Redis
-     │
-     ├── Session State
-     ├── Conversation Context
-     └── Short-Term Memory
-     │
-     ▼
-Agent Workflow
-     │
-     ▼
-Updated Context
-```
-
-This enables conversations to maintain context across multiple requests and services.
-
----
-
-# 🔐 Authentication Flow
-
-Firebase Google sign-in and email/password login both create the same Redis-backed user session.
-
-- Email/password: `POST /api/auth/register` and `POST /api/auth/login`
-- Firebase: `POST /api/auth/login` with a Firebase ID token
-- Demo mode: `POST /api/auth/login` with `dev-login` when `ALLOW_DEV_LOGIN=true`
-
-```text
-User
- │
- ▼
-Firebase Authentication
- │
- ▼
-Authentication Token
- │
- ▼
-API Gateway
- │
- ▼
-JWT Validation
- │
- ▼
-Authorized Service
-```
-
-Protected services can verify the user's identity before processing requests.
-
----
-
-# 🧩 Microservices
-
-The backend is divided into independent services to improve scalability and maintainability.
-
-| Service | Responsibility |
+| Input | Routed agent |
 |---|---|
-| **API Gateway** | Routes requests to backend services |
-| **Auth Service** | Authentication and authorization |
-| **Chat Service** | Conversations and chat functionality |
-| **Agent Service** | Agent orchestration and AI workflows |
-| **Billing Service** | Billing-related functionality |
-| **MongoDB** | Application data persistence |
-| **Redis** | Sessions and short-term AI memory |
-| **Qdrant** | Vector storage and semantic retrieval |
+| `agent` field set to a specific mode | That agent |
+| PDF upload + rewrite/create keywords | PDF |
+| PDF upload + question | PDF RAG |
+| Image upload | Image Analyzer |
+| Questions about PDFs, documents, downloads | PDF |
+| Prompts mentioning PPT, slides, presentation, deck | PPT |
+| Prompts asking to draw, design, or generate images | Vision |
+| Prompts mentioning latest/news/web search/weather | Search |
+| Prompts about code, debugging, frameworks, or APIs | Coding |
+| Everything else | Chat |
 
-Each service can be developed, tested, containerized, and deployed independently.
+Search always feeds its results into the chat agent before returning the final answer.
+
+### Agent details
+
+| Agent | What it does | Credits |
+|---|---|---|
+| Chat | General conversation using Redis memory | 1 |
+| Search | Tavily search + AI summary | 5 |
+| Coding | Intent detection, code generation, review, explanations | 10 |
+| PDF | Generates a PDF from a structured LLM response | 10 |
+| PPT | Generates a PowerPoint deck from a structured LLM response | 10 |
+| Vision | Enhances a prompt, generates an image, stores it in S3 | 10 |
+| PDF RAG | Extracts PDF text and answers strictly from it | 10 |
+| Image Analyzer | Sends the uploaded image to a vision-capable model | 10 |
+
+Agent credit costs are defined in `backend/services/auth/controllers/auth.controller.js`.
 
 ---
 
-# 🛠️ Tech Stack
+## Tech Stack
 
-| Category | Technology |
+| Layer | Technology |
 |---|---|
-| Frontend | React.js |
-| State Management | Redux Toolkit |
-| Backend | Node.js |
-| API Framework | Express.js |
-| Database | MongoDB |
-| AI Orchestration | LangChain |
-| Agent Workflows | LangGraph |
-| Vector Database | Qdrant |
-| Memory / Cache | Redis |
-| Authentication | Firebase Authentication |
-| Authorization | JWT |
-| Containerization | Docker |
-| Deployment | AWS-ready |
+| Frontend | React 19, Vite 8, Redux Toolkit, Tailwind CSS 4 |
+| UI libraries | React Markdown, remark-gfm, Monaco Editor, Lucide icons, Motion |
+| API Gateway | Node.js 20, Express 5, express-http-proxy, cookie-parser, morgan |
+| Microservices | Node.js, Express 5, Mongoose, ioredis |
+| AI service | Python 3.12, FastAPI, Uvicorn |
+| Agent framework | LangChain, LangGraph |
+| Model gateway | LiteLLM (OpenAI-compatible API) |
+| Local model | Ollama — `llama3.2:3b` |
+| Cloud fallback | Groq (optional) |
+| Web search | Tavily (optional) |
+| Databases | MongoDB 7, Redis 7, Qdrant |
+| Object storage | Adobe S3 Mock (`agent-files` bucket) |
+| Auth | Firebase Admin (optional), scrypt, Redis sessions |
+| Payments | Razorpay (optional) |
+| Containers | Docker, Docker Compose |
 
 ---
 
-# 📂 Project Structure
+## Project Structure
 
 ```text
 allverse-ai/
 │
+├── data/                              # README screenshots
+│
 ├── frontend/
 │   ├── src/
-│   ├── components/
-│   ├── pages/
-│   ├── store/
-│   └── services/
+│   │   ├── components/                # Chat UI, sidebar, artifacts, billing
+│   │   ├── features/                  # API calls
+│   │   ├── pages/                     # Landing and Home workspace
+│   │   ├── redux/                     # User, conversation, message slices
+│   │   └── utils/
+│   └── Dockerfile
 │
 ├── backend/
-│   │
-│   ├── api-gateway/
-│   │   ├── routes/
-│   │   ├── middleware/
-│   │   └── ...
-│   │
-│   ├── auth-service/
-│   │   ├── controllers/
-│   │   ├── routes/
-│   │   └── ...
-│   │
-│   ├── chat-service/
-│   │   ├── controllers/
-│   │   ├── routes/
-│   │   └── ...
-│   │
-│   ├── agent-service/
-│   │   ├── agents/
-│   │   ├── workflows/
-│   │   ├── langgraph/
-│   │   └── ...
-│   │
-│   ├── billing-service/
-│   │   └── ...
-│   │
-│   └── docker-compose.yml
+│   ├── gateway/                       # API Gateway (:8000)
+│   ├── shared/                        # Shared Redis client
+│   └── services/
+│       ├── auth/                      # Auth service (:8001)
+│       ├── chat/                      # Chat service (:8002)
+│       ├── billing/                   # Billing service (:8004)
+│       └── agent/                     # FastAPI AI service (:8003)
+│           ├── agents/                # Chat, search, coding, pdf, ppt, vision, ...
+│           ├── config/                # Settings, model factory, Redis, S3, Tavily
+│           ├── controllers/
+│           ├── graph/                 # LangGraph state, router, workflow
+│           ├── routes/
+│           ├── utils/                 # PDF/PPT generation, JSON repair, S3 helpers
+│           └── Dockerfile
 │
+├── litellm/
+│   └── config.yaml                    # LiteLLM model routing
+│
+├── docker-compose.yml                 # Full local stack
+├── .env                               # Root compose configuration
 └── README.md
 ```
 
 ---
 
-# 🚀 Getting Started
+## Getting Started
 
-## Prerequisites
+### Prerequisites
 
-Make sure you have the following installed:
-
-- Node.js
-- npm
-- MongoDB
-- Redis
-- Qdrant
-- Docker
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+- [Ollama](https://ollama.com/) running on the host machine
 - Git
 
-You will also need the required credentials for:
+Optional:
 
-- Firebase Authentication
-- Your selected LLM provider
-- Any external search or scraping service used by the Search Agent
+- Node.js 20+ and npm for running services outside Docker
+- Python 3.12+ for running the agent service outside Docker
 
----
-
-## 1. Clone the Repository
+### 1. Clone the repository
 
 ```bash
-git clone https://github.com/your-username/allverse-ai.git
-
+git clone <your-repository-url>
 cd allverse-ai
 ```
 
----
+### 2. Pull the local model
 
-## 2. Install Dependencies
-
-Install dependencies for the frontend:
+The project uses a single model for every agent:
 
 ```bash
-cd frontend
-npm install
+ollama pull llama3.2:3b
 ```
 
-Install dependencies for the backend services according to their individual directories.
+Make sure Ollama is running and reachable at `http://localhost:11434`:
 
 ```bash
-cd ../backend
+ollama list
+curl http://localhost:11434/api/tags
 ```
 
----
+Docker containers reach the host Ollama through `host.docker.internal:11434`.
 
-## 3. Configure Environment Variables
+### 3. Configure environment files
 
-Create the required `.env` files for the frontend, API Gateway, and individual services.
+Copy the root example file if you do not already have `.env`:
 
-Example:
-
-```env
-# MongoDB
-MONGODB_URI=
-
-# Redis
-REDIS_URL=
-
-# Qdrant
-QDRANT_URL=
-QDRANT_API_KEY=
-
-# Firebase
-FIREBASE_PROJECT_ID=
-FIREBASE_CLIENT_EMAIL=
-FIREBASE_PRIVATE_KEY=
-
-# JWT
-JWT_SECRET=
-
-# AI Provider
-AI_API_KEY=
-
-# Search Provider
-SEARCH_API_KEY=
+```bash
+cp .env.example .env
 ```
 
-Do not commit environment files or API credentials to the repository.
+The full stack reads:
 
----
+- `.env` — Docker Compose variables and shared configuration
+- `backend/services/auth/.env`
+- `backend/services/chat/.env`
+- `backend/services/billing/.env`
+- `backend/services/agent/.env`
+- `backend/gateway/.env`
 
-# 🐳 Run with Docker
+For a purely local setup, the default values are enough. Optional integrations:
 
-For local development, the root `docker-compose.yml` starts the full stack (frontend, gateway, microservices, databases, LiteLLM, and S3 mock).
+| Variable | Purpose |
+|---|---|
+| `TAVILY_API_KEY` | Enables the Search agent |
+| `GROQ_API_KEY` | Enables the optional Groq fallback |
+| `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` | Enables billing checkout |
+| `VITE_FIREBASE_API_KEY` / `serviceAccountKey.json` | Enables Firebase Google sign-in |
+| `ALLOW_DEV_LOGIN=true` | Enables the demo user when Firebase is not configured |
+
+### 4. Start the full stack
 
 ```bash
 docker compose up -d --build
 ```
 
-Services will be available at:
+### 5. Open the app
 
-- Frontend: `http://localhost:5173`
-- API Gateway: `http://localhost:8000`
-- LiteLLM: `http://localhost:4001`
-- Qdrant dashboard: `http://localhost:6333/dashboard`
+| Service | URL |
+|---|---|
+| Frontend | http://localhost:5173 |
+| API Gateway | http://localhost:8000 |
+| Auth Service | http://localhost:8001 |
+| Chat Service | http://localhost:8002 |
+| Agent Service | http://localhost:8003 |
+| Billing Service | http://localhost:8004 |
+| LiteLLM | http://localhost:4001 |
+| Qdrant dashboard | http://localhost:6333/dashboard |
+| S3 Mock | http://localhost:9000 |
+| MongoDB | `localhost:27017` |
+| Redis | `localhost:6379` |
 
-If Firebase credentials are not configured, `ALLOW_DEV_LOGIN=true` in `.env` enables the **Continue as Demo User** button for local development.
+With `ALLOW_DEV_LOGIN=true`, use the **Continue as Demo User** option on the landing page.
 
-To stop the services:
+### Stop the stack
 
 ```bash
 docker compose down
 ```
 
----
-
-# 💻 Run the Frontend
-
-From the frontend directory:
+### Rebuild only the AI service after code changes
 
 ```bash
-npm run dev
-```
-
-The frontend will be available at:
-
-```text
-http://localhost:5173
+docker compose up -d --build agent
 ```
 
 ---
 
-# ⚙️ Run Backend Services
+## Model Configuration
 
-Each backend service can be started independently.
+All agents use **`llama3.2:3b`**. The relevant configuration lives in two places:
 
-Example:
+1. `litellm/config.yaml` — LiteLLM model list and aliases
+2. `backend/services/agent/.env` / `backend/services/agent/config/settings.py` — agent model names
+
+The LiteLLM config defines:
+
+- `llama3.2:3b`
+- `allverse-chat`
+- `allverse-coding`
+- `allverse-vision`
+
+All aliases currently point to the same Ollama model. Groq fallbacks are not enabled by default.
+
+To switch to a different installed Ollama model, update both files, pull the model, and restart:
 
 ```bash
-cd backend/auth-service
-npm run dev
+ollama pull <model-name>
+docker compose restart litellm
+docker compose up -d --build agent
 ```
+
+Notes:
+
+- The **Image Analyzer** requires a vision-capable model (for example `llava`). `llama3.2:3b` cannot analyze images.
+- Embedding helpers require Ollama to run with embeddings enabled. The current PDF RAG agent passes extracted PDF text directly to the model, so it does not require an embedding model.
+
+---
+
+## API Reference
+
+All frontend traffic goes through the API Gateway at `http://localhost:8000`.
+
+### Auth
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/auth/register` | Register with name, email, password |
+| `POST` | `/api/auth/login` | Log in with email/password, Firebase token, or `dev-login` |
+| `GET` | `/api/auth/logout` | Clear the session |
+| `POST` | `/api/auth/deduct-credits` | Internal credit deduction |
+| `POST` | `/api/auth/update-plan` | Internal plan update after payment |
+| `GET` | `/api/me` | Current user profile |
+
+### Chat
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/chat/create-conversation` | Create a conversation |
+| `GET` | `/api/chat/get-conversations` | List the user's conversations |
+| `POST` | `/api/chat/update-conversation` | Rename or update a conversation |
+| `POST` | `/api/chat/save-message` | Persist a message |
+| `GET` | `/api/chat/get-messages/:conversationId` | Get messages for a conversation |
+
+### Agent
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/agent/chat` | Run an agent |
+
+`POST /api/agent/chat` accepts `multipart/form-data`:
+
+| Field | Required | Description |
+|---|---|---|
+| `prompt` | Yes | User request |
+| `conversationId` | Yes | Conversation ID |
+| `agent` | No | `auto`, `chat`, `search`, `coding`, `pdf`, `ppt`, `vision`, `pdf_rag`, `image_analyzer` |
+| `file` | No | PDF or image upload |
+
+The gateway adds the authenticated `x-user-id` header before forwarding to the agent service.
+
+### Billing
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/billing/create` | Create a Razorpay order |
+| `POST` | `/api/billing/verify` | Verify a Razorpay payment |
+
+---
+
+## Health Checks
 
 ```bash
-cd backend/chat-service
-npm run dev
+# Containers
+docker compose ps
+
+# Node services
+curl http://localhost:8000/
+curl http://localhost:8001/
+curl http://localhost:8002/
+curl http://localhost:8004/
+
+# Python AI service
+curl http://localhost:8003/health
+
+# LiteLLM
+curl http://localhost:4001/health/readiness
+
+# Ollama
+curl http://localhost:11434/api/tags
 ```
+
+Quick model smoke test through LiteLLM:
 
 ```bash
-cd backend/agent-service
-npm run dev
+curl -s http://localhost:4001/v1/chat/completions \
+  -H "Authorization: Bearer sk-allverse-litellm-master-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "llama3.2:3b",
+    "messages": [{"role": "user", "content": "Reply with: OK"}],
+    "max_tokens": 20
+  }'
 ```
 
-The API Gateway handles communication between the frontend and backend services.
+### Docker development
+
+- Frontend runs Vite dev server inside the container on port `5173`.
+- Backend services use `npm run start`.
+- The agent service runs `uvicorn` on port `8003`.
+- LiteLLM runs on container port `4000`, exposed as `4001`.
+- S3 Mock runs on container port `9090`, exposed as `9000`.
 
 ---
 
-# 🔄 Request Flow
+## Known Limitations
 
-A typical user request follows this flow:
-
-```text
-User
- │
- ▼
-React Frontend
- │
- ▼
-API Gateway
- │
- ▼
-Authentication
- │
- ▼
-Agent Router
- │
- ├───────────────┬───────────────┐
- ▼               ▼               ▼
-Chat Agent    Search Agent    Coding Agent
- │               │               │
- │               ▼               │
- │            Qdrant              │
- │               │               │
- └───────────────┴───────────────┘
-                 │
-                 ▼
-              LLM
-                 │
-                 ▼
-          Generated Response
-                 │
-                 ▼
-          Streaming UI
-```
+- `llama3.2:3b` is a small model. Responses are functional but less capable than larger models, especially for large code-generation artifacts.
+- Image analysis requires a vision-capable model. Use `llava` or configure a Groq vision model.
+- The Search agent requires a valid `TAVILY_API_KEY`.
+- Billing checkout requires valid Razorpay credentials.
+- Qdrant is provisioned and the vector-store helper is available, but the PDF RAG agent currently uses direct text context. Enable Ollama embeddings before adding embedding-based retrieval.
+- Presigned S3 links use `http://localhost:9000` and expire after 10 minutes.
 
 ---
 
-# 🎯 Use Cases
+## Security Notes
 
-Allverse AI can be used as a foundation for:
-
-- AI-powered conversational assistants
-- Multi-agent AI applications
-- Web research assistants
-- RAG-based knowledge assistants
-- Developer coding assistants
-- Document-based AI applications
-- Enterprise AI workspaces
-- Multi-user AI platforms
+- Do not commit `.env` files or API keys.
+- Firebase service account credentials and payment keys are sensitive.
+- Sessions are stored server-side in Redis and referenced by an HTTP-only cookie.
+- Gateway-protected routes require a valid session.
+- Generated files are served through time-limited presigned URLs.
+- Service-to-service calls use internal Docker network hostnames.
 
 ---
 
-# 📈 Scalability
+## License
 
-The microservices architecture allows individual components to scale independently.
-
-For example:
-
-```text
-High Chat Traffic
-      │
-      ▼
-Scale Chat Service
-      │
-      └── Other services remain unchanged
-
-
-High Search Traffic
-      │
-      ▼
-Scale Search / Agent Service
-      │
-      └── Qdrant handles vector retrieval
-```
-
-Docker-based services can be deployed independently and scaled according to workload.
-
----
-
-# 🔒 Security Considerations
-
-Allverse AI uses multiple layers of application security.
-
-- Firebase Authentication
-- JWT authorization
-- Protected API routes
-- Service-level authentication
-- Environment-based secrets
-- Isolated service responsibilities
-- Secure session management
-
-Never commit API keys, JWT secrets, Firebase credentials, or database credentials to the repository.
-
----
-
-# 📊 Project Highlights
-
-| Capability | Implementation |
-|---|---|
-| Multi-Agent AI | LangGraph + LangChain |
-| Conversational AI | Chat Agent |
-| Web Research | Search Agent |
-| Coding Assistance | Coding Agent |
-| RAG | Qdrant |
-| AI Memory | Redis |
-| Authentication | Firebase |
-| Authorization | JWT |
-| Backend Architecture | Microservices |
-| API Routing | API Gateway |
-| Database | MongoDB |
-| Containerization | Docker |
-| Cloud Readiness | AWS |
-
----
-
-# 🧭 Project Vision
-
-Allverse AI is designed around the idea of a unified AI workspace where users can interact with multiple specialized agents through a single interface.
-
-Rather than building separate applications for chat, research, coding, and knowledge retrieval, Allverse AI brings these capabilities together through an orchestrated multi-agent architecture.
-
-The platform provides a foundation for building scalable AI applications where specialized agents can collaborate, retrieve external knowledge, maintain context, and produce task-specific results.
-
----
-
-# 📸 Screenshots
-
-Add your project screenshots below:
-
-```html
-<p align="center">
-  <img src="YOUR_SCREENSHOT_URL_1" alt="Allverse AI Chat" width="800" />
-</p>
-
-<p align="center">
-  <img src="YOUR_SCREENSHOT_URL_2" alt="Allverse AI Search" width="800" />
-</p>
-
-<p align="center">
-  <img src="YOUR_SCREENSHOT_URL_3" alt="Allverse AI Coding" width="800" />
-</p>
-```
-
----
-
-# 📜 License
-
-This project is intended for educational and development purposes.
-
-Please review the repository license before using the project or its source code in production.
+This project is intended for educational and development purposes. Review the repository license before using it in production.
