@@ -73,9 +73,18 @@ def parse_json_response(raw) -> dict:
     raise ValueError(f"Could not parse JSON from model response: {last_error}")
 
 
+async def _ainvoke_json_mode(llm, prompt: str):
+    """Ask the model for JSON mode; fall back to a plain call if unsupported."""
+    try:
+        return await llm.bind(response_format={"type": "json_object"}).ainvoke(prompt)
+    except Exception as exc:
+        logger.debug("JSON mode unsupported, falling back to plain invoke: %s", exc)
+        return await llm.ainvoke(prompt)
+
+
 async def invoke_json(llm, prompt: str, schema_hint: str) -> dict:
     """Invoke the model and parse its JSON response, retrying once if malformed."""
-    response = await llm.ainvoke(prompt)
+    response = await _ainvoke_json_mode(llm, prompt)
 
     try:
         return parse_json_response(response.content)
@@ -97,5 +106,5 @@ Previous response:
 
 {str(response.content)[:8000]}
 """
-        repaired = await llm.ainvoke(repair_prompt)
+        repaired = await _ainvoke_json_mode(llm, repair_prompt)
         return parse_json_response(repaired.content)

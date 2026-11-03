@@ -1,5 +1,5 @@
 """
-Embedding model — Ollama nomic-embed-text.
+Embedding model — uses the single installed Ollama model (llama3.2:3b).
 Used by the PDF RAG agent for document chunking + similarity search.
 """
 

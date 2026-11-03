@@ -20,8 +20,8 @@ class Settings(BaseSettings):
     OLLAMA_HOST: str = "http://host.docker.internal:11434"
     OLLAMA_CHAT_MODEL: str = "llama3.2:3b"
     OLLAMA_CODING_MODEL: str = "llama3.2:3b"
-    OLLAMA_VISION_MODEL: str = "llava:13b"
-    OLLAMA_EMBED_MODEL: str = "nomic-embed-text"
+    OLLAMA_VISION_MODEL: str = "llama3.2:3b"
+    OLLAMA_EMBED_MODEL: str = "llama3.2:3b"
 
     # ── Groq (fallback) ─────────────────────────────────────────
     GROQ_API_KEY: str = ""
