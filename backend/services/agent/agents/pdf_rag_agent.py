@@ -3,12 +3,12 @@ PDF RAG Agent — mirrors agents/pdfRag.agent.js.
 
 Flow:
   1. Read uploaded PDF with pypdf
-  2. Pass the extracted text directly as context to the chat model
-  3. Answer strictly from the uploaded document
-  4. Delete the temp file in finally block
-
-Direct context is used instead of a vector store so PDF analysis works without
-requiring a separate embedding model to be installed locally.
+  2. Split the pages into overlapping chunks
+  3. Embed chunks with FastEmbed and index them in Qdrant
+     (one collection per conversation, recreated on every upload)
+  4. Retrieve the top-k chunks for the question and answer strictly from them
+  5. Fall back to direct text context if embedding/retrieval fails
+  6. Delete the temp file in finally block
 """
 
 import logging
@@ -16,14 +16,19 @@ import os
 
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from config.llm_models import get_model
 from config.rate_limit import check_rate_limit
+from config.vector_db import build_vector_store
 from utils.deduct_credits import deduct_credits
 from graph.state import AgentState
 
 logger = logging.getLogger(__name__)
 
+CHUNK_SIZE = 1000
+CHUNK_OVERLAP = 150
+TOP_K = 5
 MAX_CONTEXT_CHARS = 30000
 
 PDF_RAG_SYSTEM = """You are Allverse AI PDF Assistant.
@@ -35,6 +40,24 @@ Rules:
   "I couldn't find this information in the uploaded PDF."
 - Use Markdown formatting.
 """
+
+
+async def _retrieve_context(pages, question: str, conversation_id: str) -> str:
+    """Chunk, embed, index in Qdrant, and return the top-k relevant chunks."""
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP
+    )
+    chunks = splitter.split_documents(pages)
+    if not chunks:
+        return ""
+
+    store = await build_vector_store(
+        chunks,
+        f"pdf-{conversation_id}",
+        force_recreate=True,
+    )
+    results = await store.asimilarity_search(question, k=TOP_K)
+    return "\n\n".join(doc.page_content for doc in results).strip()
 
 
 async def pdf_rag_agent(state: AgentState) -> AgentState:
@@ -51,7 +74,16 @@ async def pdf_rag_agent(state: AgentState) -> AgentState:
                 "ai_response": "I couldn't extract any text from the uploaded PDF. It may be a scanned document.",
             }
 
-        context = text[:MAX_CONTEXT_CHARS]
+        conversation_id = state.get("conversation_id") or "default"
+        try:
+            context = await _retrieve_context(pages, state["prompt"], conversation_id)
+        except Exception as e:
+            logger.warning("Qdrant retrieval failed (%s); using full PDF text", e)
+            context = ""
+
+        if not context:
+            context = text[:MAX_CONTEXT_CHARS]
+
         llm = get_model("pdf_rag")
         messages = [
             SystemMessage(content=PDF_RAG_SYSTEM),

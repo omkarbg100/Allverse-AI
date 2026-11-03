@@ -1,13 +1,19 @@
 """
-Embedding model — uses the single installed Ollama model (llama3.2:3b).
-Used by the PDF RAG agent for document chunking + similarity search.
+Embedding model — FastEmbed (ONNX, CPU) running inside the agent container.
+Used by the PDF RAG agent for chunk embedding and Qdrant similarity search.
 """
 
-from langchain_ollama import OllamaEmbeddings
+from functools import lru_cache
+
+from langchain_community.embeddings import FastEmbedEmbeddings
+
 from .settings import settings
 
-embeddings = OllamaEmbeddings(
-    model=settings.OLLAMA_EMBED_MODEL,
-    base_url=settings.OLLAMA_HOST,
-)
 
+@lru_cache(maxsize=1)
+def get_embeddings() -> FastEmbedEmbeddings:
+    """Lazily build the embedding model (downloads/caches it on first use)."""
+    return FastEmbedEmbeddings(
+        model_name=settings.EMBEDDING_MODEL,
+        cache_dir=settings.FASTEMBED_CACHE_PATH,
+    )

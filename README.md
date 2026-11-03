@@ -83,7 +83,7 @@ The project is configured to run with one local Ollama model, `llama3.2:3b`, use
 - Optional Groq fallback configuration
 - Per-agent Redis rate limiting
 - Redis conversation memory
-- Qdrant vector store available for retrieval workflows
+- Qdrant vector store used by PDF RAG for chunk retrieval
 
 ### Authentication
 
@@ -382,7 +382,7 @@ docker compose up -d --build agent
 Notes:
 
 - The **Image Analyzer** requires a vision-capable model (for example `llava`). `llama3.2:3b` cannot analyze images.
-- Embedding helpers require Ollama to run with embeddings enabled. The current PDF RAG agent passes extracted PDF text directly to the model, so it does not require an embedding model.
+- PDF RAG embeds document chunks with FastEmbed (`BAAI/bge-small-en-v1.5`, ONNX/CPU, runs inside the agent container) and stores them in Qdrant. The model (~130 MB) is downloaded and cached on the first PDF request.
 
 ---
 
@@ -488,7 +488,7 @@ curl -s http://localhost:4001/v1/chat/completions \
 - Image analysis requires a vision-capable model. Use `llava` or configure a Groq vision model.
 - The Search agent requires a valid `TAVILY_API_KEY`.
 - Billing checkout requires valid Razorpay credentials.
-- Qdrant is provisioned and the vector-store helper is available, but the PDF RAG agent currently uses direct text context. Enable Ollama embeddings before adding embedding-based retrieval.
+- PDF RAG stores one Qdrant collection per conversation, recreated on every upload, and retrieves the top 5 chunks per question. If embedding/retrieval fails it falls back to passing the extracted text directly to the model.
 - Presigned S3 links use `http://localhost:9000` and expire after 10 minutes.
 
 ---

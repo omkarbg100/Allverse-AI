@@ -21,7 +21,10 @@ class Settings(BaseSettings):
     OLLAMA_CHAT_MODEL: str = "llama3.2:3b"
     OLLAMA_CODING_MODEL: str = "llama3.2:3b"
     OLLAMA_VISION_MODEL: str = "llama3.2:3b"
-    OLLAMA_EMBED_MODEL: str = "llama3.2:3b"
+
+    # ── Embeddings (FastEmbed, runs inside the agent container) ──
+    EMBEDDING_MODEL: str = "BAAI/bge-small-en-v1.5"
+    FASTEMBED_CACHE_PATH: str = "/app/.cache/fastembed"
 
     # ── Groq (fallback) ─────────────────────────────────────────
     GROQ_API_KEY: str = ""
