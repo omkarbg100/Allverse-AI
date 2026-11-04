@@ -1,0 +1,2 @@
+ARG OLLAMA_UPSTREAM_TAG=latest
+FROM ollama/ollama:${OLLAMA_UPSTREAM_TAG}

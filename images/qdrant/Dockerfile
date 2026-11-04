@@ -1,0 +1,2 @@
+ARG QDRANT_UPSTREAM_TAG=latest
+FROM qdrant/qdrant:${QDRANT_UPSTREAM_TAG}
