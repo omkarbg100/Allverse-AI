@@ -116,7 +116,7 @@ jobs:
 
       - name: Build agent
         run: |
-          docker build -f backend/services/agent/Dockerfile -t agent-service backend
+          docker build -f backend/services/agent/Dockerfile -t agent-service backend/services/agent
 
       - name: tag agent
         run: |
@@ -138,23 +138,16 @@ jobs:
         run: |
           docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/billing-service:latest
 
-      - name: Patch task definitions and deploy application services
+      - name: Force new deployment on application services
         env:
           ECS_CLUSTER: ${{ secrets.ECS_CLUSTER }}
-          AUTH_ECS_SERVICE: ${{ secrets.AUTH_SERVICE }}
-          CHAT_ECS_SERVICE: ${{ secrets.CHAT_SERVICE }}
-          BILLING_ECS_SERVICE: ${{ secrets.BILLING_SERVICE }}
-          GATEWAY_ECS_SERVICE: ${{ secrets.GATEWAY_SERVICE }}
-          AGENT_ECS_SERVICE: ${{ secrets.AGENT_SERVICE }}
-          CLOUDMAP_NAMESPACE: ${{ vars.CLOUDMAP_NAMESPACE || 'allverse.local' }}
-          OLLAMA_MODEL: ${{ vars.OLLAMA_MODEL || 'llama3.2:3b' }}
-          AGENT_S3_BUCKET: ${{ vars.AGENT_S3_BUCKET }}
-          AGENT_TASK_ROLE_ARN: ${{ vars.ECS_TASK_ROLE_ARN }}
-          SECRET_LITELLM_MASTER_KEY: ${{ vars.LITELLM_SECRET_ARN != '' && format('{0}:LITELLM_MASTER_KEY::', vars.LITELLM_SECRET_ARN) || '' }}
-          SECRET_GROQ_API_KEY: ${{ vars.LITELLM_SECRET_ARN != '' && format('{0}:GROQ_API_KEY::', vars.LITELLM_SECRET_ARN) || '' }}
-          SECRET_TAVILY_API_KEY: ${{ vars.LITELLM_SECRET_ARN != '' && format('{0}:TAVILY_API_KEY::', vars.LITELLM_SECRET_ARN) || '' }}
-          WAIT_FOR_STABLE: ${{ vars.WAIT_FOR_STABLE || 'true' }}
-        run: python3 deploy/aws/deploy_app_services.py
+          AWS_REGION: ${{ env.AWS_REGION }}
+        run: |
+          for svc in             ${{ secrets.GATEWAY_SERVICE }}             ${{ secrets.AUTH_SERVICE }}             ${{ secrets.CHAT_SERVICE }}             ${{ secrets.AGENT_SERVICE }}             ${{ secrets.BILLING_SERVICE }}; do
+            echo "Updating $svc"
+            aws ecs update-service               --cluster "$ECS_CLUSTER"               --service "$svc"               --force-new-deployment               --region "$AWS_REGION" >/dev/null
+          done
+          aws ecs wait services-stable             --cluster "$ECS_CLUSTER"             --services               ${{ secrets.GATEWAY_SERVICE }}               ${{ secrets.AUTH_SERVICE }}               ${{ secrets.CHAT_SERVICE }}               ${{ secrets.AGENT_SERVICE }}               ${{ secrets.BILLING_SERVICE }}             --region "$AWS_REGION"
 
   deploy-frontend:
     needs: deploy-backend

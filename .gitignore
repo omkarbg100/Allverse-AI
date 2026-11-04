@@ -52,6 +52,8 @@ Thumbs.db
 # AWS
 # =========================
 *.pem
+__pycache__/
+*.py[cod]
 deploy/aws/aws-state.env
 deploy/aws/*.local.env
 

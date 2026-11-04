@@ -220,12 +220,17 @@ deploy_service() {
     if [[ "$current_registry" != "$registry" ]]; then
       registry_args=(--service-registries "$registry_config")
     fi
+    local force_args=()
+    if [[ "$FORCE_IMAGE_PULL" == "true" ]]; then
+      force_args=(--force-new-deployment)
+    fi
     aws ecs update-service \
       --cluster "$ECS_CLUSTER" \
       --service "$name" \
       --task-definition "$task_definition" \
       --network-configuration "$network_config" \
       "${registry_args[@]}" \
+      "${force_args[@]}" \
       --deployment-configuration "$deployment_config" \
       --health-check-grace-period-seconds 60 \
       --region "$AWS_REGION" >/dev/null
@@ -234,6 +239,7 @@ deploy_service() {
     exit 1
   else
     echo "  creating service: $name"
+    SERVICE_CREATED["$name"]=1
     local platform_args=()
     local placement_args=()
     if [[ "$launch_type" == "FARGATE" ]]; then
@@ -338,6 +344,7 @@ render_and_register ollama ollama.json
 # ECS services
 # ---------------------------------------------------------------------------
 log "Deploying ECS services"
+declare -A SERVICE_CREATED
 deploy_service "$REDIS_SERVICE" "${TASK_DEFS[redis]}" FARGATE redis 6379 "$SERVICE_DISCOVERY_REDIS_ARN" 100 0
 deploy_service "$MONGODB_SERVICE" "${TASK_DEFS[mongodb]}" FARGATE mongodb 27017 "$SERVICE_DISCOVERY_MONGODB_ARN" 100 0
 deploy_service "$QDRANT_SERVICE" "${TASK_DEFS[qdrant]}" FARGATE qdrant 6333 "$SERVICE_DISCOVERY_QDRANT_ARN" 100 0
@@ -345,11 +352,15 @@ deploy_service "$LITELLM_SERVICE" "${TASK_DEFS[litellm]}" FARGATE litellm 4000 "
 deploy_service "$OLLAMA_SERVICE" "${TASK_DEFS[ollama]}" EC2 ollama 11434 "$SERVICE_DISCOVERY_OLLAMA_ARN" 100 0
 
 CHANGED_SERVICES=()
-[[ "${TASK_STATUS[redis]}" == "changed" ]] && CHANGED_SERVICES+=("$REDIS_SERVICE")
-[[ "${TASK_STATUS[mongodb]}" == "changed" ]] && CHANGED_SERVICES+=("$MONGODB_SERVICE")
-[[ "${TASK_STATUS[qdrant]}" == "changed" ]] && CHANGED_SERVICES+=("$QDRANT_SERVICE")
-[[ "${TASK_STATUS[litellm]}" == "changed" ]] && CHANGED_SERVICES+=("$LITELLM_SERVICE")
-[[ "${TASK_STATUS[ollama]}" == "changed" ]] && CHANGED_SERVICES+=("$OLLAMA_SERVICE")
+[[ "${TASK_STATUS[redis]}" == "changed" || "${SERVICE_CREATED[$REDIS_SERVICE]:-}" == "1" ]] && CHANGED_SERVICES+=("$REDIS_SERVICE")
+[[ "${TASK_STATUS[mongodb]}" == "changed" || "${SERVICE_CREATED[$MONGODB_SERVICE]:-}" == "1" ]] && CHANGED_SERVICES+=("$MONGODB_SERVICE")
+[[ "${TASK_STATUS[qdrant]}" == "changed" || "${SERVICE_CREATED[$QDRANT_SERVICE]:-}" == "1" ]] && CHANGED_SERVICES+=("$QDRANT_SERVICE")
+[[ "${TASK_STATUS[litellm]}" == "changed" || "${SERVICE_CREATED[$LITELLM_SERVICE]:-}" == "1" ]] && CHANGED_SERVICES+=("$LITELLM_SERVICE")
+[[ "${TASK_STATUS[ollama]}" == "changed" || "${SERVICE_CREATED[$OLLAMA_SERVICE]:-}" == "1" ]] && CHANGED_SERVICES+=("$OLLAMA_SERVICE")
+
+if [[ "$FORCE_IMAGE_PULL" == "true" ]]; then
+  CHANGED_SERVICES=("$REDIS_SERVICE" "$MONGODB_SERVICE" "$QDRANT_SERVICE" "$LITELLM_SERVICE" "$OLLAMA_SERVICE")
+fi
 
 if [[ "$WAIT_FOR_STABLE" == "true" && ${#CHANGED_SERVICES[@]} -gt 0 ]]; then
   log "Waiting for ${CHANGED_SERVICES[*]} to stabilize"
@@ -380,5 +391,5 @@ Images:
 Next:
   - Ensure the Ollama GPU ASG exists: bash deploy/aws/gpu-capacity.sh
   - Pull the model once: bash deploy/aws/pull-ollama-model.sh
-  - Roll out application env: python3 deploy/aws/deploy_app_services.py
+  - Roll out application env: ${PYTHON_BIN} deploy/aws/deploy_app_services.py
 EOF
