@@ -482,16 +482,17 @@ curl -s http://localhost:4001/v1/chat/completions \
 
 ### Production deployment on AWS ECS
 
-See [`deployment.md`](deployment.md) for the full AWS architecture, service
-layout, CI/CD flow, required GitHub secrets/variables and manual console steps.
-
-The deployment extends the existing five application services with:
+The repository includes an ECS deployment toolkit in [`deploy/aws/`](deploy/aws/README.md).
+It extends the existing five application services with:
 
 - `redis-service`, `mongodb-service`, `qdrant-service`, `litellm-service` on Fargate
 - `ollama-service` on GPU-backed EC2 (Fargate has no GPU support)
 - EFS access points for MongoDB, Redis, Qdrant and Ollama model storage
 - Cloud Map private DNS (`allverse.local`) for internal service-to-service traffic
 - S3 access through the ECS task role (no static AWS keys)
+
+See [`deploy/aws/README.md`](deploy/aws/README.md) for the architecture, AWS CLI
+commands, required GitHub Actions variables/secrets and manual console steps.
 
 ---
 

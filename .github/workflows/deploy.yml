@@ -11,7 +11,95 @@ env:
   AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
 
 jobs:
+  deploy-infrastructure:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: aws configure
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push redis if changed
+        env:
+          UPSTREAM_TAG: ${{ vars.REDIS_IMAGE_TAG || '7' }}
+        run: |
+          set -euo pipefail
+          HASH=$( { cat images/redis/Dockerfile; printf 'upstream=redis:%s\n' "$UPSTREAM_TAG"; } | sha256sum | cut -c1-12 )
+          echo "REDIS_HASH=$HASH" >> "$GITHUB_ENV"
+          if aws ecr describe-images --repository-name redis --image-ids imageTag="$HASH" --region "$AWS_REGION" >/dev/null 2>&1; then
+            echo "redis:$HASH already in ECR, skipping"
+          else
+            docker build --build-arg REDIS_UPSTREAM_TAG="$UPSTREAM_TAG" -t "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/redis:$HASH" images/redis
+            docker push "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/redis:$HASH"
+          fi
+
+      - name: Build and push mongodb if changed
+        env:
+          UPSTREAM_TAG: ${{ vars.MONGODB_IMAGE_TAG || '7' }}
+        run: |
+          set -euo pipefail
+          HASH=$( { cat images/mongodb/Dockerfile; printf 'upstream=mongo:%s\n' "$UPSTREAM_TAG"; } | sha256sum | cut -c1-12 )
+          echo "MONGODB_HASH=$HASH" >> "$GITHUB_ENV"
+          if aws ecr describe-images --repository-name mongodb --image-ids imageTag="$HASH" --region "$AWS_REGION" >/dev/null 2>&1; then
+            echo "mongodb:$HASH already in ECR, skipping"
+          else
+            docker build --build-arg MONGODB_UPSTREAM_TAG="$UPSTREAM_TAG" -t "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/mongodb:$HASH" images/mongodb
+            docker push "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/mongodb:$HASH"
+          fi
+
+      - name: Build and push qdrant if changed
+        env:
+          UPSTREAM_TAG: ${{ vars.QDRANT_IMAGE_TAG || 'latest' }}
+        run: |
+          set -euo pipefail
+          HASH=$( { cat images/qdrant/Dockerfile; printf 'upstream=qdrant/qdrant:%s\n' "$UPSTREAM_TAG"; } | sha256sum | cut -c1-12 )
+          echo "QDRANT_HASH=$HASH" >> "$GITHUB_ENV"
+          if aws ecr describe-images --repository-name qdrant --image-ids imageTag="$HASH" --region "$AWS_REGION" >/dev/null 2>&1; then
+            echo "qdrant:$HASH already in ECR, skipping"
+          else
+            docker build --build-arg QDRANT_UPSTREAM_TAG="$UPSTREAM_TAG" -t "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/qdrant:$HASH" images/qdrant
+            docker push "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/qdrant:$HASH"
+          fi
+
+      - name: Build and push ollama if changed
+        env:
+          UPSTREAM_TAG: ${{ vars.OLLAMA_IMAGE_TAG || 'latest' }}
+        run: |
+          set -euo pipefail
+          HASH=$( { cat images/ollama/Dockerfile; printf 'upstream=ollama/ollama:%s\n' "$UPSTREAM_TAG"; } | sha256sum | cut -c1-12 )
+          echo "OLLAMA_HASH=$HASH" >> "$GITHUB_ENV"
+          if aws ecr describe-images --repository-name ollama --image-ids imageTag="$HASH" --region "$AWS_REGION" >/dev/null 2>&1; then
+            echo "ollama:$HASH already in ECR, skipping"
+          else
+            docker build --build-arg OLLAMA_UPSTREAM_TAG="$UPSTREAM_TAG" -t "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/ollama:$HASH" images/ollama
+            docker push "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/ollama:$HASH"
+          fi
+
+      - name: Build and push litellm if changed
+        env:
+          UPSTREAM_TAG: ${{ vars.LITELLM_UPSTREAM_TAG || 'main-latest' }}
+        run: |
+          set -euo pipefail
+          HASH=$( { find images/litellm -type f -print0 | sort -z | xargs -0 sha256sum; printf 'base=%s\n' "$UPSTREAM_TAG"; } | sha256sum | cut -c1-12 )
+          echo "LITELLM_HASH=$HASH" >> "$GITHUB_ENV"
+          if aws ecr describe-images --repository-name litellm --image-ids imageTag="$HASH" --region "$AWS_REGION" >/dev/null 2>&1; then
+            echo "litellm:$HASH already in ECR, skipping"
+          else
+            docker build --build-arg LITELLM_BASE_IMAGE="ghcr.io/berriai/litellm:$UPSTREAM_TAG" -f images/litellm/Dockerfile -t "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/litellm:$HASH" images/litellm
+            docker push "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/litellm:$HASH"
+          fi
+
   deploy-backend:
+    needs: deploy-infrastructure
+    if: ${{ always() && (needs.deploy-infrastructure.result == 'success' || needs.deploy-infrastructure.result == 'skipped') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
