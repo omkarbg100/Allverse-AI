@@ -45,13 +45,15 @@
         "OLLAMA_VISION_MODEL": __OLLAMA_MODEL__,
         "USE_LITELLM": "true",
         "AWS_REGION": __AWS_REGION__,
-        "AWS_BUCKET_NAME": __AGENT_S3_BUCKET__,
-        "AWS_ACCESS_KEY_ID": "",
-        "AWS_SECRET_KEY": "",
-        "MINIO_ENDPOINT": "",
-        "S3_PUBLIC_ENDPOINT": ""
+        "AWS_BUCKET_NAME": __AGENT_S3_BUCKET__
       },
       "skipIfEmpty": ["AWS_BUCKET_NAME"],
+      "removeEnvironment": [
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_KEY",
+        "MINIO_ENDPOINT",
+        "S3_PUBLIC_ENDPOINT"
+      ],
       "secrets": {
         "LITELLM_API_KEY": __SECRET_LITELLM_MASTER_KEY__,
         "GROQ_API_KEY": __SECRET_GROQ_API_KEY__,

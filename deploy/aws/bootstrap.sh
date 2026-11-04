@@ -40,7 +40,7 @@ export AWS_REGION
 
 # On Git Bash/Cygwin, aws.exe emits CRLF which breaks shell comparisons.
 if [[ "${OSTYPE:-}" == msys* || "${OSTYPE:-}" == cygwin* ]]; then
-  aws() { command aws "$@" | tr -d ''; }
+  aws() { command aws "$@" | tr -d '\r'; }
 fi
 
 log() { printf '\n==> %s\n' "$*"; }
