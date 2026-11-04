@@ -58,6 +58,7 @@ def run(args: list[str], *, check: bool = True) -> subprocess.CompletedProcess[s
         args,
         check=check,
         text=True,
+        encoding="utf-8",
         capture_output=True,
     )
 
@@ -167,11 +168,14 @@ def register_task_definition(document: dict) -> str:
 
 def merge_container(container: dict, config: dict) -> None:
     skip_if_empty = set(config.get("skipIfEmpty", []))
+    remove_environment = set(config.get("removeEnvironment", []))
 
     desired_environment = {
         item["name"]: item.get("value", "")
         for item in container.get("environment", [])
     }
+    for key in remove_environment:
+        desired_environment.pop(key, None)
     for key, value in config.get("environment", {}).items():
         if value == "" and key in skip_if_empty:
             continue
@@ -228,6 +232,7 @@ def main() -> None:
     config = render_config()
     updated: list[str] = []
     rolled_out: list[str] = []
+    missing: list[str] = []
 
     for name, service_config in config["services"].items():
         service = service_config["service"]
@@ -235,11 +240,13 @@ def main() -> None:
 
         if not service:
             print("  skipping: service name is empty", file=sys.stderr)
+            missing.append(name)
             continue
 
         task_definition = service_task_definition(cluster, service)
         if not task_definition:
             print(f"  skipping: ECS service {service} not found", file=sys.stderr)
+            missing.append(service)
             continue
 
         current = describe_task_definition(task_definition)
@@ -318,6 +325,12 @@ def main() -> None:
 
     if updated:
         print(f"Registered new revisions for: {', '.join(updated)}")
+
+    if missing:
+        sys.exit(
+            "deploy_app_services.py: ECS services not found: "
+            + ", ".join(missing)
+        )
 
 
 if __name__ == "__main__":

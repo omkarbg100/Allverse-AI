@@ -17,6 +17,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_NAME="${PROJECT_NAME:-allverse}"
+PYTHON_BIN="${PYTHON_BIN:-python3}"
 
 STATE_FILE="${STATE_FILE:-${SCRIPT_DIR}/aws-state.env}"
 if [[ -f "$STATE_FILE" ]]; then
@@ -169,7 +170,7 @@ log "ECS-optimized GPU AMI"
 AMI_ID="$(aws ssm get-parameter \
   --name "$GPU_AMI_SSM_PARAM" \
   --query 'Parameter.Value' \
-  --output text | python -c 'import json,sys; print(json.load(sys.stdin)["image_id"])')"
+  --output text | "$PYTHON_BIN" -c 'import json,sys; print(json.load(sys.stdin)["image_id"])')"
 echo "  $AMI_ID ($GPU_AMI_SSM_PARAM)"
 
 # ---------------------------------------------------------------------------
@@ -190,7 +191,7 @@ EOF
 )"
 USER_DATA_B64="$(printf '%s' "$USER_DATA" | base64 | tr -d '\r\n')"
 
-python - "$TMP_DIR/launch-template.json" "$AMI_ID" "$GPU_INSTANCE_TYPE" "$PROFILE_NAME" "$GPU_SG_ID" "$USER_DATA_B64" "$PROJECT_NAME" <<'PY'
+"$PYTHON_BIN" - "$TMP_DIR/launch-template.json" "$AMI_ID" "$GPU_INSTANCE_TYPE" "$PROFILE_NAME" "$GPU_SG_ID" "$USER_DATA_B64" "$PROJECT_NAME" <<'PY'
 import json
 import sys
 

@@ -283,8 +283,10 @@ What `deploy_app_services.py` does:
 - Reads the current task definition of each application ECS service.
 - Merges the production endpoints from `app-env.json` (Redis, MongoDB,
   Qdrant, LiteLLM, Ollama, S3 region/bucket).
-- Clears `MINIO_ENDPOINT`, `S3_PUBLIC_ENDPOINT`, `AWS_ACCESS_KEY_ID` and
-  `AWS_SECRET_KEY` so the agent falls back to the ECS task role.
+- Removes `MINIO_ENDPOINT`, `S3_PUBLIC_ENDPOINT`, `AWS_ACCESS_KEY_ID` and
+  `AWS_SECRET_KEY` so the agent falls back to the ECS task role. (ECS may
+  discard empty environment values, so the script removes these keys instead
+  of setting them to empty strings; the agent defaults are now empty.)
 - Adds `LITELLM_API_KEY`, `GROQ_API_KEY` and `TAVILY_API_KEY` from Secrets
   Manager.
 - Sets the agent task role to `ECS_TASK_ROLE_ARN` so it can use S3/EFS.
@@ -303,7 +305,7 @@ What `deploy_app_services.py` does:
 | agent | `OLLAMA_HOST` | `http://ollama.allverse.local:11434` |
 | agent | `OLLAMA_*_MODEL` | value of `OLLAMA_MODEL` |
 | agent | `AWS_BUCKET_NAME` | existing bucket (or unchanged if `AGENT_S3_BUCKET` is empty) |
-| agent | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_KEY`, `MINIO_ENDPOINT`, `S3_PUBLIC_ENDPOINT` | empty (task role + real S3) |
+| agent | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_KEY`, `MINIO_ENDPOINT`, `S3_PUBLIC_ENDPOINT` | removed (task role + real S3) |
 
 The script intentionally does **not** change `AUTH_SERVICE`, `CHAT_SERVICE`,
 `GATEWAY_PUBLIC_URL`, CORS or Razorpay variables. If your existing task

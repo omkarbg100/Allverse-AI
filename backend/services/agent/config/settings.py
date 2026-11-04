@@ -42,12 +42,12 @@ class Settings(BaseSettings):
     AUTH_SERVICE: str = "http://auth:8001"
 
     # ── S3 / MinIO ──────────────────────────────────────────────
-    AWS_ACCESS_KEY_ID: str = "minioadmin"
-    AWS_SECRET_KEY: str = "minioadmin"
+    AWS_ACCESS_KEY_ID: str = ""
+    AWS_SECRET_KEY: str = ""
     AWS_BUCKET_NAME: str = "agent-files"
     AWS_REGION: str = "us-east-1"
-    MINIO_ENDPOINT: str = "http://minio:9000"
-    S3_PUBLIC_ENDPOINT: str = "http://localhost:9000"
+    MINIO_ENDPOINT: str = ""
+    S3_PUBLIC_ENDPOINT: str = ""
 
     # ── Qdrant ──────────────────────────────────────────────────
     QDRANT_URL: str = "http://qdrant:6333"

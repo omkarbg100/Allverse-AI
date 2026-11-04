@@ -18,6 +18,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_NAME="${PROJECT_NAME:-allverse}"
+PYTHON_BIN="${PYTHON_BIN:-python3}"
 
 STATE_FILE="${STATE_FILE:-${SCRIPT_DIR}/aws-state.env}"
 if [[ -f "$STATE_FILE" ]]; then
@@ -63,7 +64,7 @@ fi
 
 echo "Pulling ${OLLAMA_MODEL} on ${INSTANCE_ID}..."
 
-python - "$TMP_DIR/request.json" "$INSTANCE_ID" "$OLLAMA_MODEL" <<'PY'
+"$PYTHON_BIN" - "$TMP_DIR/request.json" "$INSTANCE_ID" "$OLLAMA_MODEL" <<'PY'
 import json
 import sys
 
@@ -74,8 +75,8 @@ commands = [
     'if [ -z "$CONTAINER_ID" ]; then',
     '  echo "Ollama container not found on this instance"; exit 1',
     "fi",
-    f'sudo docker exec "$CONTAINER_ID" ollama pull "{model}"',
-    'sudo docker exec "$CONTAINER_ID" ollama list',
+    f'sudo docker exec -e OLLAMA_HOST=127.0.0.1:11434 "$CONTAINER_ID" ollama pull "{model}"',
+    'sudo docker exec -e OLLAMA_HOST=127.0.0.1:11434 "$CONTAINER_ID" ollama list',
 ]
 payload = {
     "InstanceIds": [instance_id],
@@ -95,7 +96,7 @@ COMMAND_ID="$(aws ssm send-command \
 
 echo "SSM command: ${COMMAND_ID}"
 
-for _ in $(seq 1 120); do
+for _ in $(seq 1 360); do
   STATUS="$(aws ssm get-command-invocation \
     --command-id "$COMMAND_ID" \
     --instance-id "$INSTANCE_ID" \

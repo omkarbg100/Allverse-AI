@@ -79,6 +79,7 @@ fi
 OLLAMA_PLACEMENT_EXPRESSION="${OLLAMA_PLACEMENT_EXPRESSION-attribute:ecs.instance-type =~ g[456].*}"
 
 WAIT_FOR_STABLE="${WAIT_FOR_STABLE:-true}"
+FORCE_IMAGE_PULL="${FORCE_IMAGE_PULL:-false}"
 
 export AWS_REGION AWS_ACCOUNT_ID
 
@@ -128,7 +129,7 @@ image_exists() {
 mirror_image() {
   local source="$1" repo="$2" tag="$3"
   ensure_repo "$repo"
-  if image_exists "$repo" "$tag"; then
+  if [[ "$FORCE_IMAGE_PULL" != "true" ]] && image_exists "$repo" "$tag"; then
     echo "  skip ${repo}:${tag} (already present in ECR)"
     return
   fi
@@ -172,14 +173,14 @@ register_taskdef() {
     local diff_status=$?
     set -e
     if [[ $diff_status -eq 0 ]]; then
-      echo "  unchanged: $family"
+      echo "  unchanged: $family" >&2
       printf '%s unchanged\n' "$current_arn"
       return
     elif [[ $diff_status -ne 1 ]]; then
       echo "  task definition comparison failed for $family" >&2
       exit 1
     fi
-    echo "  changed: $family"
+    echo "  changed: $family" >&2
   fi
 
   local new_arn
@@ -209,12 +210,22 @@ deploy_service() {
 
   if [[ "$status" == "ACTIVE" ]]; then
     echo "  updating service: $name"
+    local current_registry registry_args=()
+    current_registry="$(aws ecs describe-services \
+      --cluster "$ECS_CLUSTER" \
+      --services "$name" \
+      --region "$AWS_REGION" \
+      --query 'services[0].serviceRegistries[0].registryArn' \
+      --output text 2>/dev/null || true)"
+    if [[ "$current_registry" != "$registry" ]]; then
+      registry_args=(--service-registries "$registry_config")
+    fi
     aws ecs update-service \
       --cluster "$ECS_CLUSTER" \
       --service "$name" \
       --task-definition "$task_definition" \
       --network-configuration "$network_config" \
-      --service-registries "$registry_config" \
+      "${registry_args[@]}" \
       --deployment-configuration "$deployment_config" \
       --health-check-grace-period-seconds 60 \
       --region "$AWS_REGION" >/dev/null

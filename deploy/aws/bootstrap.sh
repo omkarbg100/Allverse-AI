@@ -182,6 +182,15 @@ else
   echo "  exists: $EFS_ID"
 fi
 
+for _ in $(seq 1 60); do
+  efs_state="$(aws efs describe-file-systems \
+    --file-system-id "$EFS_ID" \
+    --query 'FileSystems[0].LifeCycleState' \
+    --output text 2>/dev/null || true)"
+  [[ "$efs_state" == "available" ]] && break
+  sleep 5
+done
+
 for subnet in ${SUBNETS_CSV//,/ }; do
   target="$(aws efs describe-mount-targets \
     --file-system-id "$EFS_ID" \
@@ -196,6 +205,17 @@ for subnet in ${SUBNETS_CSV//,/ }; do
   else
     echo "  mount target exists in $subnet"
   fi
+done
+
+for _ in $(seq 1 60); do
+  pending_targets="$(aws efs describe-mount-targets \
+    --file-system-id "$EFS_ID" \
+    --query "MountTargets[?LifeCycleState!='available'].MountTargetId" \
+    --output text 2>/dev/null || true)"
+  if [[ -z "$pending_targets" || "$pending_targets" == "None" ]]; then
+    break
+  fi
+  sleep 5
 done
 
 create_access_point() {
@@ -410,18 +430,26 @@ NAMESPACE_ID="$(aws servicediscovery list-namespaces \
   --output text 2>/dev/null || true)"
 
 if [[ -z "$NAMESPACE_ID" || "$NAMESPACE_ID" == "None" ]]; then
-  aws servicediscovery create-private-dns-namespace \
+  OPERATION_ID="$(aws servicediscovery create-private-dns-namespace \
     --name "$CLOUDMAP_NAMESPACE" \
-    --vpc "$VPC_ID" >/dev/null
-  for _ in $(seq 1 30); do
-    NAMESPACE_ID="$(aws servicediscovery list-namespaces \
-      --query "Namespaces[?Name=='${CLOUDMAP_NAMESPACE}'].Id | [0]" \
+    --vpc "$VPC_ID" \
+    --query 'OperationId' \
+    --output text)"
+  for _ in $(seq 1 60); do
+    namespace_status="$(aws servicediscovery get-operation \
+      --operation-id "$OPERATION_ID" \
+      --query 'Operation.Status' \
       --output text 2>/dev/null || true)"
-    if [[ -n "$NAMESPACE_ID" && "$NAMESPACE_ID" != "None" ]]; then
-      break
+    [[ "$namespace_status" == "SUCCESS" ]] && break
+    if [[ "$namespace_status" == "FAIL" ]]; then
+      echo "Cloud Map namespace creation failed (operation ${OPERATION_ID})." >&2
+      exit 1
     fi
     sleep 5
   done
+  NAMESPACE_ID="$(aws servicediscovery list-namespaces \
+    --query "Namespaces[?Name=='${CLOUDMAP_NAMESPACE}'].Id | [0]" \
+    --output text 2>/dev/null || true)"
   echo "  created: $NAMESPACE_ID"
 else
   echo "  exists: $NAMESPACE_ID"

@@ -170,6 +170,10 @@ jobs:
           VITE_FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY }}
           VITE_RAZORPAY_KEY_ID: ${{ vars.RAZORPAY_KEY_ID }}
         run: |
+          if [ -z "$VITE_SERVER_URL" ]; then
+            echo "GATEWAY_PUBLIC_URL repository variable is required for production builds." >&2
+            exit 1
+          fi
           cd frontend
           npm install
           npm run build
