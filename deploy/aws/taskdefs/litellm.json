@@ -1,0 +1,78 @@
+{
+  "family": "allverse-litellm",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "1024",
+  "memory": "2048",
+  "executionRoleArn": __EXECUTION_ROLE_ARN__,
+  "taskRoleArn": __TASK_ROLE_ARN__,
+  "runtimePlatform": {
+    "cpuArchitecture": "X86_64",
+    "operatingSystemFamily": "LINUX"
+  },
+  "containerDefinitions": [
+    {
+      "name": "litellm",
+      "image": __IMAGE_LITELLM__,
+      "essential": true,
+      "portMappings": [
+        {
+          "name": "litellm",
+          "containerPort": 4000,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "OLLAMA_API_BASE",
+          "value": __OLLAMA_API_BASE__
+        },
+        {
+          "name": "OLLAMA_MODEL",
+          "value": __OLLAMA_MODEL__
+        },
+        {
+          "name": "LITELLM_LOG",
+          "value": "INFO"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "LITELLM_MASTER_KEY",
+          "valueFrom": __SECRET_LITELLM_MASTER_KEY__
+        },
+        {
+          "name": "GROQ_API_KEY",
+          "valueFrom": __SECRET_GROQ_API_KEY__
+        },
+        {
+          "name": "OPENAI_API_KEY",
+          "valueFrom": __SECRET_OPENAI_API_KEY__
+        },
+        {
+          "name": "ANTHROPIC_API_KEY",
+          "valueFrom": __SECRET_ANTHROPIC_API_KEY__
+        }
+      ],
+      "healthCheck": {
+        "command": [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:4000/health/readiness', timeout=3)\""
+        ],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 5,
+        "startPeriod": 30
+      },
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": __LOG_GROUP_LITELLM__,
+          "awslogs-region": __AWS_REGION__,
+          "awslogs-stream-prefix": "litellm"
+        }
+      },
+      "stopTimeout": 30
+    }
+  ]
+}

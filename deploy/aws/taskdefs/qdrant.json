@@ -1,0 +1,93 @@
+{
+  "family": "allverse-qdrant",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "1024",
+  "memory": "2048",
+  "executionRoleArn": __EXECUTION_ROLE_ARN__,
+  "taskRoleArn": __TASK_ROLE_ARN__,
+  "runtimePlatform": {
+    "cpuArchitecture": "X86_64",
+    "operatingSystemFamily": "LINUX"
+  },
+  "volumes": [
+    {
+      "name": "qdrant-data",
+      "efsVolumeConfiguration": {
+        "fileSystemId": __EFS_FILE_SYSTEM_ID__,
+        "transitEncryption": "ENABLED",
+        "authorizationConfig": {
+          "accessPointId": __EFS_AP_QDRANT__,
+          "iam": "ENABLED"
+        }
+      }
+    }
+  ],
+  "containerDefinitions": [
+    {
+      "name": "qdrant",
+      "image": __IMAGE_QDRANT__,
+      "essential": true,
+      "portMappings": [
+        {
+          "name": "qdrant-http",
+          "containerPort": 6333,
+          "protocol": "tcp"
+        },
+        {
+          "name": "qdrant-grpc",
+          "containerPort": 6334,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "QDRANT__SERVICE__HTTP_PORT",
+          "value": "6333"
+        },
+        {
+          "name": "QDRANT__SERVICE__GRPC_PORT",
+          "value": "6334"
+        },
+        {
+          "name": "QDRANT__STORAGE__STORAGE_PATH",
+          "value": "/qdrant/storage"
+        },
+        {
+          "name": "QDRANT__STORAGE__SNAPSHOTS_PATH",
+          "value": "/qdrant/snapshots"
+        },
+        {
+          "name": "QDRANT__TELEMETRY_DISABLED",
+          "value": "true"
+        }
+      ],
+      "mountPoints": [
+        {
+          "sourceVolume": "qdrant-data",
+          "containerPath": "/qdrant",
+          "readOnly": false
+        }
+      ],
+      "healthCheck": {
+        "command": [
+          "CMD-SHELL",
+          "timeout 3 bash -c 'exec 3<>/dev/tcp/127.0.0.1/6333'"
+        ],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 30
+      },
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": __LOG_GROUP_QDRANT__,
+          "awslogs-region": __AWS_REGION__,
+          "awslogs-stream-prefix": "qdrant"
+        }
+      },
+      "stopTimeout": 60
+    }
+  ]
+}

@@ -1,0 +1,89 @@
+{
+  "family": "allverse-ollama",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["EC2"],
+  "cpu": "4096",
+  "memory": "14336",
+  "executionRoleArn": __EXECUTION_ROLE_ARN__,
+  "taskRoleArn": __TASK_ROLE_ARN__,
+  "volumes": [
+    {
+      "name": "ollama-models",
+      "efsVolumeConfiguration": {
+        "fileSystemId": __EFS_FILE_SYSTEM_ID__,
+        "transitEncryption": "ENABLED",
+        "authorizationConfig": {
+          "accessPointId": __EFS_AP_OLLAMA__,
+          "iam": "ENABLED"
+        }
+      }
+    }
+  ],
+  "containerDefinitions": [
+    {
+      "name": "ollama",
+      "image": __IMAGE_OLLAMA__,
+      "essential": true,
+      "portMappings": [
+        {
+          "name": "ollama",
+          "containerPort": 11434,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "OLLAMA_HOST",
+          "value": "0.0.0.0:11434"
+        },
+        {
+          "name": "OLLAMA_MODELS",
+          "value": "/models"
+        },
+        {
+          "name": "OLLAMA_MODEL",
+          "value": __OLLAMA_MODEL__
+        },
+        {
+          "name": "OLLAMA_KEEP_ALIVE",
+          "value": __OLLAMA_KEEP_ALIVE__
+        },
+        {
+          "name": "OLLAMA_MAX_LOADED_MODELS",
+          "value": "1"
+        },
+        {
+          "name": "OLLAMA_NUM_PARALLEL",
+          "value": "1"
+        }
+      ],
+      "resourceRequirements": __RAW_OLLAMA_RESOURCE_REQUIREMENTS__,
+      "linuxParameters": {
+        "sharedMemorySize": 2048
+      },
+      "mountPoints": [
+        {
+          "sourceVolume": "ollama-models",
+          "containerPath": "/models",
+          "readOnly": false
+        }
+      ],
+      "healthCheck": {
+        "command": ["CMD-SHELL", "ollama list >/dev/null 2>&1"],
+        "interval": 30,
+        "timeout": 10,
+        "retries": 5,
+        "startPeriod": 60
+      },
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": __LOG_GROUP_OLLAMA__,
+          "awslogs-region": __AWS_REGION__,
+          "awslogs-stream-prefix": "ollama"
+        }
+      },
+      "stopTimeout": 60
+    }
+  ]
+}
