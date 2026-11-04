@@ -9,7 +9,7 @@ set -eu
 export OLLAMA_API_BASE
 export OLLAMA_MODEL
 
-python3 - <<'PY'
+/app/.venv/bin/python - <<'PY'
 import os
 import pathlib
 import string

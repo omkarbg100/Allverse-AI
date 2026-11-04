@@ -1,2 +1,8 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Deployment scripts are executed on Linux runners / hosts.
+deploy/aws/**/*.sh text eol=lf
+deploy/aws/**/*.py text eol=lf
+deploy/aws/images/**/Dockerfile text eol=lf
+deploy/aws/images/**/*.sh text eol=lf

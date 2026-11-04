@@ -1,28 +1,78 @@
 name: allverse ai deployment
 
 on:
- push:
-   branches:
-     - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
 
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
-  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }} 
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
 
-jobs: 
-
-  deploy-backend:
-     runs-on: ubuntu-latest 
-     steps:
+jobs:
+  deploy-infrastructure:
+    if: ${{ vars.SKIP_INFRA_DEPLOY != 'true' }}
+    runs-on: ubuntu-latest
+    steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: aws configure
         uses: aws-actions/configure-aws-credentials@v4
-        with: 
-          aws-access-key-id: ${{secrets.AWS_ACCESS_KEY}}
-          aws-secret-access-key: ${{secrets.AWS_SECRET_ACCESS_KEY}}
-          aws-region: ${{env.AWS_REGION}}
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Deploy infrastructure services
+        env:
+          ECS_CLUSTER: ${{ secrets.ECS_CLUSTER }}
+          PRIVATE_SUBNET_IDS: ${{ vars.PRIVATE_SUBNET_IDS }}
+          INFRA_SECURITY_GROUP_ID: ${{ vars.INFRA_SECURITY_GROUP_ID }}
+          EFS_FILE_SYSTEM_ID: ${{ vars.EFS_FILE_SYSTEM_ID }}
+          EFS_AP_REDIS: ${{ vars.EFS_AP_REDIS }}
+          EFS_AP_MONGODB: ${{ vars.EFS_AP_MONGODB }}
+          EFS_AP_QDRANT: ${{ vars.EFS_AP_QDRANT }}
+          EFS_AP_OLLAMA: ${{ vars.EFS_AP_OLLAMA }}
+          ECS_EXECUTION_ROLE_ARN: ${{ vars.ECS_EXECUTION_ROLE_ARN }}
+          ECS_TASK_ROLE_ARN: ${{ vars.ECS_TASK_ROLE_ARN }}
+          LITELLM_SECRET_ARN: ${{ vars.LITELLM_SECRET_ARN }}
+          SERVICE_DISCOVERY_REDIS_ARN: ${{ vars.SERVICE_DISCOVERY_REDIS_ARN }}
+          SERVICE_DISCOVERY_MONGODB_ARN: ${{ vars.SERVICE_DISCOVERY_MONGODB_ARN }}
+          SERVICE_DISCOVERY_QDRANT_ARN: ${{ vars.SERVICE_DISCOVERY_QDRANT_ARN }}
+          SERVICE_DISCOVERY_LITELLM_ARN: ${{ vars.SERVICE_DISCOVERY_LITELLM_ARN }}
+          SERVICE_DISCOVERY_OLLAMA_ARN: ${{ vars.SERVICE_DISCOVERY_OLLAMA_ARN }}
+          CLOUDMAP_NAMESPACE: ${{ vars.CLOUDMAP_NAMESPACE || 'allverse.local' }}
+          REDIS_IMAGE_TAG: ${{ vars.REDIS_IMAGE_TAG || '7' }}
+          MONGODB_IMAGE_TAG: ${{ vars.MONGODB_IMAGE_TAG || '7' }}
+          QDRANT_IMAGE_TAG: ${{ vars.QDRANT_IMAGE_TAG || 'latest' }}
+          OLLAMA_IMAGE_TAG: ${{ vars.OLLAMA_IMAGE_TAG || 'latest' }}
+          LITELLM_UPSTREAM_TAG: ${{ vars.LITELLM_UPSTREAM_TAG || 'main-latest' }}
+          OLLAMA_MODEL: ${{ vars.OLLAMA_MODEL || 'llama3.2:3b' }}
+          OLLAMA_KEEP_ALIVE: ${{ vars.OLLAMA_KEEP_ALIVE || '30m' }}
+          OLLAMA_GPU_COUNT: ${{ vars.OLLAMA_GPU_COUNT || '1' }}
+          OLLAMA_PLACEMENT_EXPRESSION: ${{ vars.OLLAMA_PLACEMENT_EXPRESSION || 'attribute:ecs.instance-type =~ g[456].*' }}
+          WAIT_FOR_STABLE: ${{ vars.WAIT_FOR_STABLE || 'true' }}
+        run: bash deploy/aws/deploy-infra.sh
+
+  deploy-backend:
+    needs: deploy-infrastructure
+    if: ${{ always() && (needs.deploy-infrastructure.result == 'success' || needs.deploy-infrastructure.result == 'skipped') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: aws configure
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to ECR
         id: login-ecr
@@ -30,145 +80,117 @@ jobs:
 
       - name: Build Gateway
         run: |
-          docker build -f backend/gateway/Dockerfile -t gateway backend 
+          docker build -f backend/gateway/Dockerfile -t gateway backend
 
       - name: tag Gateway
         run: |
           docker tag gateway:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/gateway:latest
 
-      - name: push Gateway 
+      - name: push Gateway
         run: |
-          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/gateway:latest  
+          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/gateway:latest
 
-
-
-
-      - name: Build Auth 
+      - name: Build Auth
         run: |
-          docker build -f backend/services/auth/Dockerfile -t auth-service backend 
+          docker build -f backend/services/auth/Dockerfile -t auth-service backend
 
       - name: tag auth
         run: |
           docker tag auth-service:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/auth-service:latest
 
-      - name: push auth 
+      - name: push auth
         run: |
-          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/auth-service:latest 
+          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/auth-service:latest
 
-
-
-      - name: Build Chat 
+      - name: Build Chat
         run: |
-          docker build -f backend/services/chat/Dockerfile -t chat-service backend 
+          docker build -f backend/services/chat/Dockerfile -t chat-service backend
 
       - name: tag chat
         run: |
           docker tag chat-service:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/chat-service:latest
 
-      - name: push chat 
+      - name: push chat
         run: |
           docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/chat-service:latest
 
-
-
-      - name: Build agent 
+      - name: Build agent
         run: |
-          docker build -f backend/services/agent/Dockerfile -t agent-service backend 
+          docker build -f backend/services/agent/Dockerfile -t agent-service backend
 
       - name: tag agent
         run: |
           docker tag agent-service:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/agent-service:latest
 
-      - name: push agent 
+      - name: push agent
         run: |
           docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/agent-service:latest
 
-
-
-
-      - name: Build billing 
+      - name: Build billing
         run: |
-          docker build -f backend/services/billing/Dockerfile -t billing-service backend 
+          docker build -f backend/services/billing/Dockerfile -t billing-service backend
 
       - name: tag billing
         run: |
           docker tag billing-service:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/billing-service:latest
 
-      - name: push billing 
+      - name: push billing
         run: |
-          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/billing-service:latest  
+          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/billing-service:latest
 
-
-      - name: deploy gateway
-        run: |
-          aws ecs update-service \
-          --cluster ${{secrets.ECS_CLUSTER}} \
-          --service ${{secrets.GATEWAY_SERVICE}} \
-          --force-new-deployment
-
-
-      - name: deploy auth
-        run: |
-          aws ecs update-service \
-          --cluster ${{secrets.ECS_CLUSTER}} \
-          --service ${{secrets.AUTH_SERVICE}} \
-          --force-new-deployment
-
-      - name: deploy chat
-        run: |
-          aws ecs update-service \
-          --cluster ${{secrets.ECS_CLUSTER}} \
-          --service ${{secrets.CHAT_SERVICE}} \
-          --force-new-deployment          
-
-
-      - name: deploy agent
-        run: |
-          aws ecs update-service \
-          --cluster ${{secrets.ECS_CLUSTER}} \
-          --service ${{secrets.AGENT_SERVICE}} \
-          --force-new-deployment
-
-      - name: deploy billing
-        run: |
-          aws ecs update-service \
-          --cluster ${{secrets.ECS_CLUSTER}} \
-          --service ${{secrets.BILLING_SERVICE}} \
-          --force-new-deployment  
+      - name: Patch task definitions and deploy application services
+        env:
+          ECS_CLUSTER: ${{ secrets.ECS_CLUSTER }}
+          AUTH_ECS_SERVICE: ${{ secrets.AUTH_SERVICE }}
+          CHAT_ECS_SERVICE: ${{ secrets.CHAT_SERVICE }}
+          BILLING_ECS_SERVICE: ${{ secrets.BILLING_SERVICE }}
+          GATEWAY_ECS_SERVICE: ${{ secrets.GATEWAY_SERVICE }}
+          AGENT_ECS_SERVICE: ${{ secrets.AGENT_SERVICE }}
+          CLOUDMAP_NAMESPACE: ${{ vars.CLOUDMAP_NAMESPACE || 'allverse.local' }}
+          OLLAMA_MODEL: ${{ vars.OLLAMA_MODEL || 'llama3.2:3b' }}
+          AGENT_S3_BUCKET: ${{ vars.AGENT_S3_BUCKET }}
+          AGENT_TASK_ROLE_ARN: ${{ vars.ECS_TASK_ROLE_ARN }}
+          SECRET_LITELLM_MASTER_KEY: ${{ vars.LITELLM_SECRET_ARN != '' && format('{0}:LITELLM_MASTER_KEY::', vars.LITELLM_SECRET_ARN) || '' }}
+          SECRET_GROQ_API_KEY: ${{ vars.LITELLM_SECRET_ARN != '' && format('{0}:GROQ_API_KEY::', vars.LITELLM_SECRET_ARN) || '' }}
+          SECRET_TAVILY_API_KEY: ${{ vars.LITELLM_SECRET_ARN != '' && format('{0}:TAVILY_API_KEY::', vars.LITELLM_SECRET_ARN) || '' }}
+          WAIT_FOR_STABLE: ${{ vars.WAIT_FOR_STABLE || 'true' }}
+        run: python3 deploy/aws/deploy_app_services.py
 
   deploy-frontend:
     needs: deploy-backend
-    runs-on: ubuntu-latest 
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4 
+        uses: actions/checkout@v4
 
       - name: build frontend
-        run: | 
+        env:
+          VITE_SERVER_URL: ${{ vars.GATEWAY_PUBLIC_URL }}
+          VITE_ALLOW_DEV_LOGIN: 'false'
+          VITE_FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY }}
+          VITE_RAZORPAY_KEY_ID: ${{ vars.RAZORPAY_KEY_ID }}
+        run: |
           cd frontend
           npm install
-          npm run build        
+          npm run build
 
       - name: aws configure
         uses: aws-actions/configure-aws-credentials@v4
-        with: 
-          aws-access-key-id: ${{secrets.AWS_ACCESS_KEY}}
-          aws-secret-access-key: ${{secrets.AWS_SECRET_ACCESS_KEY}}
-          aws-region: ${{env.AWS_REGION}}
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: upload to s3
         run: |
           aws s3 sync \
           frontend/dist \
-          s3://${{secrets.S3_BUCKET}} \
+          s3://${{ secrets.S3_BUCKET }} \
           --delete
 
       - name: invalidate cloudfront
-        run: | 
+        run: |
           aws cloudfront create-invalidation \
           --distribution-id \
-          ${{secrets.CLOUDFRONT_DISTRIBUTION_ID}} \
+          ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
           --paths "/*"
-
-
-        

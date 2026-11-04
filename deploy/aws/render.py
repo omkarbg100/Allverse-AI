@@ -20,8 +20,10 @@ import os
 import re
 import sys
 
-RAW_TOKEN = re.compile(r"__RAW_([A-Z0-9_]+)__")
-PLAIN_TOKEN = re.compile(r"__([A-Z0-9_]+)__")
+# The lookarounds keep placeholders from matching inside legitimate
+# double-underscore names such as QDRANT__SERVICE__HTTP_PORT.
+RAW_TOKEN = re.compile(r"(?<![A-Z0-9_])__RAW_([A-Z0-9_]+)__(?![A-Z0-9_])")
+PLAIN_TOKEN = re.compile(r"(?<![A-Z0-9_])__([A-Z0-9_]+)__(?![A-Z0-9_])")
 
 
 def _missing(name: str, raw: bool) -> None:

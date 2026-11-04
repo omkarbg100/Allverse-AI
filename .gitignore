@@ -52,6 +52,8 @@ Thumbs.db
 # AWS
 # =========================
 *.pem
+deploy/aws/aws-state.env
+deploy/aws/*.local.env
 
 # =========================
 # Firebase

@@ -480,6 +480,20 @@ curl -s http://localhost:4001/v1/chat/completions \
 - LiteLLM runs on container port `4000`, exposed as `4001`.
 - S3 Mock runs on container port `9090`, exposed as `9000`.
 
+### Production deployment on AWS ECS
+
+The repository includes an ECS deployment toolkit in [`deploy/aws/`](deploy/aws/README.md).
+It extends the existing five application services with:
+
+- `redis-service`, `mongodb-service`, `qdrant-service`, `litellm-service` on Fargate
+- `ollama-service` on GPU-backed EC2 (Fargate has no GPU support)
+- EFS access points for MongoDB, Redis, Qdrant and Ollama model storage
+- Cloud Map private DNS (`allverse.local`) for internal service-to-service traffic
+- S3 access through the ECS task role (no static AWS keys)
+
+See [`deploy/aws/README.md`](deploy/aws/README.md) for the architecture, AWS CLI
+commands, required GitHub Actions variables/secrets and manual console steps.
+
 ---
 
 ## Known Limitations

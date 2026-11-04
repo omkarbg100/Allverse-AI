@@ -251,7 +251,9 @@ cat > "$TMP_DIR/execution-policy.json" <<JSON
       "Action": [
         "elasticfilesystem:ClientMount",
         "elasticfilesystem:ClientWrite",
-        "elasticfilesystem:ClientRootAccess"
+        "elasticfilesystem:ClientRootAccess",
+        "elasticfilesystem:DescribeMountTargets",
+        "elasticfilesystem:DescribeFileSystems"
       ],
       "Resource": ["${EFS_ARN}", "${EFS_ACCESS_POINT_ARN}"]
     },
@@ -273,7 +275,9 @@ cat > "$TMP_DIR/task-policy.json" <<JSON
       "Action": [
         "elasticfilesystem:ClientMount",
         "elasticfilesystem:ClientWrite",
-        "elasticfilesystem:ClientRootAccess"
+        "elasticfilesystem:ClientRootAccess",
+        "elasticfilesystem:DescribeMountTargets",
+        "elasticfilesystem:DescribeFileSystems"
       ],
       "Resource": ["${EFS_ARN}", "${EFS_ACCESS_POINT_ARN}"]
     },
@@ -364,7 +368,7 @@ SECRET_ARN="$(aws secretsmanager describe-secret \
 
 if [[ -z "$SECRET_ARN" || "$SECRET_ARN" == "None" ]]; then
   MASTER_KEY="sk-$(python3 -c 'import secrets; print(secrets.token_hex(24))')"
-  SECRET_ARN="$(python3 - "$LITELLM_SECRET_NAME" "$MASTER_KEY" > "$TMP_DIR/secret.json" <<'PY'
+  python3 - "$LITELLM_SECRET_NAME" "$MASTER_KEY" > "$TMP_DIR/secret.json" <<'PY'
 import json
 import sys
 
@@ -381,7 +385,6 @@ print(json.dumps({
     }),
 }))
 PY
-  )"
   SECRET_ARN="$(aws secretsmanager create-secret \
     --cli-input-json "file://${TMP_DIR}/secret.json" \
     --query 'ARN' \
