@@ -12,7 +12,6 @@ env:
 
 jobs:
   deploy-infrastructure:
-    if: ${{ vars.SKIP_INFRA_DEPLOY != 'true' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -28,36 +27,166 @@ jobs:
       - name: Login to ECR
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Deploy infrastructure services
+      - name: Build and push redis if changed
+        env:
+          UPSTREAM_TAG: ${{ vars.REDIS_IMAGE_TAG || '7' }}
+        run: |
+          set -euo pipefail
+          HASH=$( { cat images/redis/Dockerfile; printf 'upstream=redis:%s\n' "$UPSTREAM_TAG"; } | sha256sum | cut -c1-12 )
+          echo "REDIS_HASH=$HASH" >> "$GITHUB_ENV"
+          if aws ecr describe-images --repository-name redis --image-ids imageTag="$HASH" --region "$AWS_REGION" >/dev/null 2>&1; then
+            echo "redis:$HASH already in ECR, skipping"
+          else
+            docker build --build-arg REDIS_UPSTREAM_TAG="$UPSTREAM_TAG" -t "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/redis:$HASH" images/redis
+            docker push "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/redis:$HASH"
+          fi
+
+      - name: Build and push mongodb if changed
+        env:
+          UPSTREAM_TAG: ${{ vars.MONGODB_IMAGE_TAG || '7' }}
+        run: |
+          set -euo pipefail
+          HASH=$( { cat images/mongodb/Dockerfile; printf 'upstream=mongo:%s\n' "$UPSTREAM_TAG"; } | sha256sum | cut -c1-12 )
+          echo "MONGODB_HASH=$HASH" >> "$GITHUB_ENV"
+          if aws ecr describe-images --repository-name mongodb --image-ids imageTag="$HASH" --region "$AWS_REGION" >/dev/null 2>&1; then
+            echo "mongodb:$HASH already in ECR, skipping"
+          else
+            docker build --build-arg MONGODB_UPSTREAM_TAG="$UPSTREAM_TAG" -t "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/mongodb:$HASH" images/mongodb
+            docker push "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/mongodb:$HASH"
+          fi
+
+      - name: Build and push qdrant if changed
+        env:
+          UPSTREAM_TAG: ${{ vars.QDRANT_IMAGE_TAG || 'latest' }}
+        run: |
+          set -euo pipefail
+          HASH=$( { cat images/qdrant/Dockerfile; printf 'upstream=qdrant/qdrant:%s\n' "$UPSTREAM_TAG"; } | sha256sum | cut -c1-12 )
+          echo "QDRANT_HASH=$HASH" >> "$GITHUB_ENV"
+          if aws ecr describe-images --repository-name qdrant --image-ids imageTag="$HASH" --region "$AWS_REGION" >/dev/null 2>&1; then
+            echo "qdrant:$HASH already in ECR, skipping"
+          else
+            docker build --build-arg QDRANT_UPSTREAM_TAG="$UPSTREAM_TAG" -t "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/qdrant:$HASH" images/qdrant
+            docker push "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/qdrant:$HASH"
+          fi
+
+      - name: Build and push ollama if changed
+        env:
+          UPSTREAM_TAG: ${{ vars.OLLAMA_IMAGE_TAG || 'latest' }}
+        run: |
+          set -euo pipefail
+          HASH=$( { cat images/ollama/Dockerfile; printf 'upstream=ollama/ollama:%s\n' "$UPSTREAM_TAG"; } | sha256sum | cut -c1-12 )
+          echo "OLLAMA_HASH=$HASH" >> "$GITHUB_ENV"
+          if aws ecr describe-images --repository-name ollama --image-ids imageTag="$HASH" --region "$AWS_REGION" >/dev/null 2>&1; then
+            echo "ollama:$HASH already in ECR, skipping"
+          else
+            docker build --build-arg OLLAMA_UPSTREAM_TAG="$UPSTREAM_TAG" -t "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/ollama:$HASH" images/ollama
+            docker push "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/ollama:$HASH"
+          fi
+
+      - name: Build and push litellm if changed
+        env:
+          UPSTREAM_TAG: ${{ vars.LITELLM_UPSTREAM_TAG || 'main-latest' }}
+        run: |
+          set -euo pipefail
+          HASH=$( { find images/litellm -type f -print0 | sort -z | xargs -0 sha256sum; printf 'base=%s\n' "$UPSTREAM_TAG"; } | sha256sum | cut -c1-12 )
+          echo "LITELLM_HASH=$HASH" >> "$GITHUB_ENV"
+          if aws ecr describe-images --repository-name litellm --image-ids imageTag="$HASH" --region "$AWS_REGION" >/dev/null 2>&1; then
+            echo "litellm:$HASH already in ECR, skipping"
+          else
+            docker build --build-arg LITELLM_BASE_IMAGE="ghcr.io/berriai/litellm:$UPSTREAM_TAG" -f images/litellm/Dockerfile -t "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/litellm:$HASH" images/litellm
+            docker push "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/litellm:$HASH"
+          fi
+
+      - name: Update infrastructure services if changed
         env:
           ECS_CLUSTER: ${{ secrets.ECS_CLUSTER }}
-          PRIVATE_SUBNET_IDS: ${{ vars.PRIVATE_SUBNET_IDS }}
-          INFRA_SECURITY_GROUP_ID: ${{ vars.INFRA_SECURITY_GROUP_ID }}
-          EFS_FILE_SYSTEM_ID: ${{ vars.EFS_FILE_SYSTEM_ID }}
-          EFS_AP_REDIS: ${{ vars.EFS_AP_REDIS }}
-          EFS_AP_MONGODB: ${{ vars.EFS_AP_MONGODB }}
-          EFS_AP_QDRANT: ${{ vars.EFS_AP_QDRANT }}
-          EFS_AP_OLLAMA: ${{ vars.EFS_AP_OLLAMA }}
-          ECS_EXECUTION_ROLE_ARN: ${{ vars.ECS_EXECUTION_ROLE_ARN }}
-          ECS_TASK_ROLE_ARN: ${{ vars.ECS_TASK_ROLE_ARN }}
-          LITELLM_SECRET_ARN: ${{ vars.LITELLM_SECRET_ARN }}
-          SERVICE_DISCOVERY_REDIS_ARN: ${{ vars.SERVICE_DISCOVERY_REDIS_ARN }}
-          SERVICE_DISCOVERY_MONGODB_ARN: ${{ vars.SERVICE_DISCOVERY_MONGODB_ARN }}
-          SERVICE_DISCOVERY_QDRANT_ARN: ${{ vars.SERVICE_DISCOVERY_QDRANT_ARN }}
-          SERVICE_DISCOVERY_LITELLM_ARN: ${{ vars.SERVICE_DISCOVERY_LITELLM_ARN }}
-          SERVICE_DISCOVERY_OLLAMA_ARN: ${{ vars.SERVICE_DISCOVERY_OLLAMA_ARN }}
-          CLOUDMAP_NAMESPACE: ${{ vars.CLOUDMAP_NAMESPACE || 'allverse.local' }}
-          REDIS_IMAGE_TAG: ${{ vars.REDIS_IMAGE_TAG || '7' }}
-          MONGODB_IMAGE_TAG: ${{ vars.MONGODB_IMAGE_TAG || '7' }}
-          QDRANT_IMAGE_TAG: ${{ vars.QDRANT_IMAGE_TAG || 'latest' }}
-          OLLAMA_IMAGE_TAG: ${{ vars.OLLAMA_IMAGE_TAG || 'latest' }}
-          LITELLM_UPSTREAM_TAG: ${{ vars.LITELLM_UPSTREAM_TAG || 'main-latest' }}
-          OLLAMA_MODEL: ${{ vars.OLLAMA_MODEL || 'llama3.2:3b' }}
-          OLLAMA_KEEP_ALIVE: ${{ vars.OLLAMA_KEEP_ALIVE || '30m' }}
-          OLLAMA_GPU_COUNT: ${{ vars.OLLAMA_GPU_COUNT || '1' }}
-          OLLAMA_PLACEMENT_EXPRESSION: ${{ vars.OLLAMA_PLACEMENT_EXPRESSION || 'attribute:ecs.instance-type =~ g[456].*' }}
-          WAIT_FOR_STABLE: ${{ vars.WAIT_FOR_STABLE || 'true' }}
-        run: bash deploy/aws/deploy-infra.sh
+          ECR_REGISTRY: ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
+          REDIS_SERVICE: redis-service
+          MONGODB_SERVICE: mongodb-service
+          QDRANT_SERVICE: qdrant-service
+          LITELLM_SERVICE: litellm-service
+          OLLAMA_SERVICE: ollama-service
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, subprocess, sys
+
+          region = os.environ["AWS_REGION"]
+          cluster = os.environ["ECS_CLUSTER"]
+          registry = os.environ["ECR_REGISTRY"]
+
+          services = [
+              ("redis", "redis-service", "redis"),
+              ("mongodb", "mongodb-service", "mongodb"),
+              ("qdrant", "qdrant-service", "qdrant"),
+              ("litellm", "litellm-service", "litellm"),
+              ("ollama", "ollama-service", "ollama"),
+          ]
+
+          hash_env = {
+              "redis": os.environ["REDIS_HASH"],
+              "mongodb": os.environ["MONGODB_HASH"],
+              "qdrant": os.environ["QDRANT_HASH"],
+              "litellm": os.environ["LITELLM_HASH"],
+              "ollama": os.environ["OLLAMA_HASH"],
+          }
+
+          def run(args, check=True):
+              return subprocess.run(args, check=check, text=True, capture_output=True)
+
+          changed_services = []
+          for key, svc_name, container in services:
+              image_uri = f"{registry}/{key}:{hash_env[key]}"
+              family = f"allverse-{key}"
+
+              # fetch current task def
+              res = run(["aws", "ecs", "describe-task-definition", "--task-definition", family,
+                         "--query", "taskDefinition", "--output", "json", "--region", region], check=False)
+              if res.returncode != 0 or not res.stdout.strip():
+                  print(f"  {family}: not found, skipping")
+                  continue
+              current = json.loads(res.stdout)
+
+              # build desired (copy + replace image)
+              desired = json.loads(json.dumps(current))
+              for c in desired.get("containerDefinitions", []):
+                  if c.get("name") == container:
+                      c["image"] = image_uri
+
+              # strip volatile keys
+              strip = {"taskDefinitionArn","revision","status","registeredAt","registeredBy","deregisteredAt","compatibilities","requiresAttributes","tags"}
+              cur_cmp = {k: v for k, v in current.items() if k not in strip}
+              des_cmp = {k: v for k, v in desired.items() if k not in strip}
+
+              if cur_cmp == des_cmp:
+                  print(f"  unchanged: {family}")
+                  new_arn = current["taskDefinitionArn"]
+              else:
+                  print(f"  changed: {family}")
+                  payload = {k: v for k, v in desired.items() if k not in strip}
+                  import tempfile, pathlib
+                  with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+                      json.dump(payload, f)
+                      path = f.name
+                  reg = run(["aws", "ecs", "register-task-definition", "--cli-input-json", f"file://{path}",
+                             "--query", "taskDefinition.taskDefinitionArn", "--output", "text", "--region", region])
+                  pathlib.Path(path).unlink(missing_ok=True)
+                  new_arn = reg.stdout.strip()
+                  changed_services.append(svc_name)
+
+              if cur_cmp != des_cmp:
+                  run(["aws", "ecs", "update-service", "--cluster", cluster, "--service", svc_name,
+                       "--task-definition", new_arn, "--force-new-deployment", "--region", region])
+                  print(f"  {svc_name} -> {new_arn} (updated)")
+              else:
+                  print(f"  {svc_name} unchanged, skipping update")
+
+          if changed_services:
+              print("Waiting for services to stabilize...")
+              run(["aws", "ecs", "wait", "services-stable", "--cluster", cluster,
+                   "--services"] + changed_services + ["--region", region])
+              print("All changed infrastructure services are stable.")
+          PY
 
   deploy-backend:
     needs: deploy-infrastructure
@@ -81,73 +210,41 @@ jobs:
       - name: Build Gateway
         run: |
           docker build -f backend/gateway/Dockerfile -t gateway backend
-
-      - name: tag Gateway
-        run: |
           docker tag gateway:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/gateway:latest
-
-      - name: push Gateway
-        run: |
           docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/gateway:latest
 
       - name: Build Auth
         run: |
           docker build -f backend/services/auth/Dockerfile -t auth-service backend
-
-      - name: tag auth
-        run: |
           docker tag auth-service:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/auth-service:latest
-
-      - name: push auth
-        run: |
           docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/auth-service:latest
 
       - name: Build Chat
         run: |
           docker build -f backend/services/chat/Dockerfile -t chat-service backend
-
-      - name: tag chat
-        run: |
           docker tag chat-service:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/chat-service:latest
-
-      - name: push chat
-        run: |
           docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/chat-service:latest
 
       - name: Build agent
         run: |
           docker build -f backend/services/agent/Dockerfile -t agent-service backend/services/agent
-
-      - name: tag agent
-        run: |
           docker tag agent-service:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/agent-service:latest
-
-      - name: push agent
-        run: |
           docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/agent-service:latest
 
       - name: Build billing
         run: |
           docker build -f backend/services/billing/Dockerfile -t billing-service backend
-
-      - name: tag billing
-        run: |
           docker tag billing-service:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/billing-service:latest
-
-      - name: push billing
-        run: |
           docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/billing-service:latest
 
       - name: Force new deployment on application services
         env:
           ECS_CLUSTER: ${{ secrets.ECS_CLUSTER }}
-          AWS_REGION: ${{ env.AWS_REGION }}
         run: |
-          for svc in             ${{ secrets.GATEWAY_SERVICE }}             ${{ secrets.AUTH_SERVICE }}             ${{ secrets.CHAT_SERVICE }}             ${{ secrets.AGENT_SERVICE }}             ${{ secrets.BILLING_SERVICE }}; do
-            echo "Updating $svc"
-            aws ecs update-service               --cluster "$ECS_CLUSTER"               --service "$svc"               --force-new-deployment               --region "$AWS_REGION" >/dev/null
+          for svc in ${{ secrets.GATEWAY_SERVICE }} ${{ secrets.AUTH_SERVICE }} ${{ secrets.CHAT_SERVICE }} ${{ secrets.AGENT_SERVICE }} ${{ secrets.BILLING_SERVICE }}; do
+            aws ecs update-service --cluster "$ECS_CLUSTER" --service "$svc" --force-new-deployment --region "$AWS_REGION" >/dev/null
           done
-          aws ecs wait services-stable             --cluster "$ECS_CLUSTER"             --services               ${{ secrets.GATEWAY_SERVICE }}               ${{ secrets.AUTH_SERVICE }}               ${{ secrets.CHAT_SERVICE }}               ${{ secrets.AGENT_SERVICE }}               ${{ secrets.BILLING_SERVICE }}             --region "$AWS_REGION"
+          aws ecs wait services-stable --cluster "$ECS_CLUSTER" --services ${{ secrets.GATEWAY_SERVICE }} ${{ secrets.AUTH_SERVICE }} ${{ secrets.CHAT_SERVICE }} ${{ secrets.AGENT_SERVICE }} ${{ secrets.BILLING_SERVICE }} --region "$AWS_REGION"
 
   deploy-frontend:
     needs: deploy-backend
@@ -180,14 +277,8 @@ jobs:
 
       - name: upload to s3
         run: |
-          aws s3 sync \
-          frontend/dist \
-          s3://${{ secrets.S3_BUCKET }} \
-          --delete
+          aws s3 sync frontend/dist s3://${{ secrets.S3_BUCKET }} --delete
 
       - name: invalidate cloudfront
         run: |
-          aws cloudfront create-invalidation \
-          --distribution-id \
-          ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
-          --paths "/*"
+          aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"
