@@ -16,11 +16,14 @@ def _drop_expect_header(request, **kwargs):
 
 
 def _build_client(endpoint_url: str | None):
-    kwargs = dict(
-        region_name=settings.AWS_REGION,
-        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=settings.AWS_SECRET_KEY,
-    )
+    kwargs = dict(region_name=settings.AWS_REGION)
+
+    # Local MinIO/S3Mock uses explicit credentials. In AWS the credentials
+    # come from the ECS task role, so leave them unset when they are empty.
+    if settings.AWS_ACCESS_KEY_ID and settings.AWS_SECRET_KEY:
+        kwargs["aws_access_key_id"] = settings.AWS_ACCESS_KEY_ID
+        kwargs["aws_secret_access_key"] = settings.AWS_SECRET_KEY
+
     if endpoint_url:
         kwargs["endpoint_url"] = endpoint_url
     client = boto3.client("s3", **kwargs)

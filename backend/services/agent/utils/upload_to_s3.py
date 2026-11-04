@@ -16,9 +16,13 @@ _bucket_ready = False
 
 
 def _ensure_bucket(s3) -> None:
-    """Create the configured bucket when a local S3-compatible store lacks it."""
+    """Create the configured bucket when a local S3-compatible store lacks it.
+
+    In AWS the bucket is provisioned outside the application and the ECS task
+    role only grants object access, so never attempt CreateBucket there.
+    """
     global _bucket_ready
-    if _bucket_ready:
+    if _bucket_ready or not settings.MINIO_ENDPOINT:
         return
 
     bucket = settings.AWS_BUCKET_NAME
