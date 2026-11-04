@@ -38,6 +38,11 @@ STATE_FILE="${STATE_FILE:-${SCRIPT_DIR}/aws-state.env}"
 
 export AWS_REGION
 
+# On Git Bash/Cygwin, aws.exe emits CRLF which breaks shell comparisons.
+if [[ "${OSTYPE:-}" == msys* || "${OSTYPE:-}" == cygwin* ]]; then
+  aws() { command aws "$@" | tr -d ''; }
+fi
+
 log() { printf '\n==> %s\n' "$*"; }
 warn() { printf 'WARNING: %s\n' "$*" >&2; }
 

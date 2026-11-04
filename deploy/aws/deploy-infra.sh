@@ -81,6 +81,11 @@ OLLAMA_PLACEMENT_EXPRESSION="${OLLAMA_PLACEMENT_EXPRESSION-attribute:ecs.instanc
 WAIT_FOR_STABLE="${WAIT_FOR_STABLE:-true}"
 
 export AWS_REGION AWS_ACCOUNT_ID
+
+# On Git Bash/Cygwin, aws.exe emits CRLF which breaks shell comparisons.
+if [[ "${OSTYPE:-}" == msys* || "${OSTYPE:-}" == cygwin* ]]; then
+  aws() { command aws "$@" | tr -d ''; }
+fi
 export EXECUTION_ROLE_ARN TASK_ROLE_ARN
 export EFS_FILE_SYSTEM_ID EFS_AP_REDIS EFS_AP_MONGODB EFS_AP_QDRANT EFS_AP_OLLAMA
 export OLLAMA_MODEL OLLAMA_KEEP_ALIVE OLLAMA_RESOURCE_REQUIREMENTS

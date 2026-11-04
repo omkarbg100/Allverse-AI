@@ -30,6 +30,11 @@ if [[ -f "$STATE_FILE" ]]; then
 fi
 
 AWS_REGION="${AWS_REGION:?AWS_REGION is required}"
+
+# On Git Bash/Cygwin, aws.exe emits CRLF which breaks shell comparisons.
+if [[ "${OSTYPE:-}" == msys* || "${OSTYPE:-}" == cygwin* ]]; then
+  aws() { command aws "$@" | tr -d ''; }
+fi
 ECS_CLUSTER="${ECS_CLUSTER:?ECS_CLUSTER is required}"
 OLLAMA_MODEL="${OLLAMA_MODEL:-llama3.2:3b}"
 
