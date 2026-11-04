@@ -491,9 +491,8 @@ It extends the existing five application services with:
 - Cloud Map private DNS (`allverse.local`) for internal service-to-service traffic
 - S3 access through the ECS task role (no static AWS keys)
 
-See [`deploy/aws/README.md`](deploy/aws/README.md) for the architecture, AWS CLI
-commands, required GitHub Actions variables/secrets and manual console steps.
-
+See [deployment.md](deployment.md) for the full deployment guide, including the
+AWS ECS architecture, AWS services used, CI/CD pipelines, and required secrets.
 ---
 
 ## Known Limitations
