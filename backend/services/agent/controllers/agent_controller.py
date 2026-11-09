@@ -11,6 +11,8 @@ Handles the POST /chat request:
 
 import logging
 import os
+import time
+import uuid
 from pathlib import Path
 
 import httpx
@@ -54,10 +56,12 @@ async def handle_agent(
     x_user_id:       str,
     file:            UploadFile | None = None,
 ) -> dict:
-    """
+    \"\"\"
     Core handler — called by the FastAPI route.
-    Returns {"answer": str, "images": list|None, "artifacts": list|None}
-    """
+    Returns {\"answer\": str, \"images\": list|None, \"artifacts\": list|None}
+    \"\"\"
+
+    trace_id = str(uuid.uuid4())
 
     # ── 1. Persist uploaded file to disk (mirrors multer diskStorage) ──
     file_meta: dict | None = None
@@ -111,5 +115,6 @@ async def handle_agent(
         "answer":    ai_response,
         "images":    images,
         "artifacts": artifacts,
+        "trace_id":  trace_id,
     }
 
