@@ -69,6 +69,8 @@ async def handle_agent(
         steps.append(entry)
         logger.info("trace=%s step=%s", trace_id, name)
 
+    add_step("received_request")
+
     # ── 1. Persist uploaded file to disk (mirrors multer diskStorage) ──
     file_meta: dict | None = None
     if file and file.filename:
@@ -90,9 +92,12 @@ async def handle_agent(
     }] if file_meta else None
 
     # ── 2. Save user message to chat service ───────────────────────
+    add_step("persisting_user_message")
     await _save_message(conversation_id, "user", prompt, attachments=attachments)
 
     # ── 3. Invoke LangGraph ────────────────────────────────────────
+    add_step("thinking")
+    add_step(f"running_{agent or 'auto'}")
     result = await graph.ainvoke(
         {
             "prompt":          prompt,
@@ -102,6 +107,8 @@ async def handle_agent(
             "file":            file_meta,
         }
     )
+
+    add_step("completed")
 
     logger.info("graph result agent=%s ai_response_len=%s",
                 result.get("agent"), len(result.get("ai_response") or ""))
