@@ -520,3 +520,7 @@ AWS ECS architecture, AWS services used, CI/CD pipelines, and required secrets.
 ## License
 
 This project is intended for educational and development purposes. Review the repository license before using it in production.
+
+## Request Tracing
+
+The `/chat` endpoint returns `trace_id` and `steps` for every request. `steps` contains the request lifecycle (`received_request`, `persisting_user_message`, `thinking`, `running_<agent>`, `completed`). The frontend renders these steps in the assistant message bubble and logs them server-side with the matching `trace_id`.
