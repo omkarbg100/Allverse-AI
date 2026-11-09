@@ -129,5 +129,6 @@ async def handle_agent(
         "images":    images,
         "artifacts": artifacts,
         "trace_id":  trace_id,
+        "steps":     steps,
     }
 
