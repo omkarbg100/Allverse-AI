@@ -62,6 +62,12 @@ async def handle_agent(
     \"\"\"
 
     trace_id = str(uuid.uuid4())
+    steps: list[dict] = []
+
+    def add_step(name: str) -> None:
+        entry = {"step": name, "ts": time.time()}
+        steps.append(entry)
+        logger.info("trace=%s step=%s", trace_id, name)
 
     # ── 1. Persist uploaded file to disk (mirrors multer diskStorage) ──
     file_meta: dict | None = None
