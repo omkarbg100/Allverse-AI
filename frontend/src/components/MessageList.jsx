@@ -52,7 +52,7 @@ function MessageList() {
 
         {messages?.map((msg, index)=>(
             <div key={`${msg?.role}-${index}`}>
-               <MessageBubble role={msg?.role} content={msg?.content} images={msg.images || []} attachments={msg.attachments || []} /> 
+                <MessageBubble role={msg?.role} content={msg?.content} images={msg.images || []} attachments={msg.attachments || []} traceId={msg.traceId} steps={msg.steps || []} />
             </div>
         ))}
 
