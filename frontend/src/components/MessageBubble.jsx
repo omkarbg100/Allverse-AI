@@ -6,7 +6,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import formatFileSize from '../../utils/formatFileSize'
 
-function MessageBubble({ role, content, images, attachments = [] }) {
+function MessageBubble({ role, content, images, attachments = [], traceId, steps = [] }) {
   const isUser = role === "user"
   const [lightBox, setLightBox] = useState(null)
   const [copiedCode, setCopiedCode] = useState("")
@@ -184,6 +184,19 @@ function MessageBubble({ role, content, images, attachments = [] }) {
         >
           {content}
         </Markdown>
+        {steps.length > 0 && (
+          <div className='mt-3 border-t border-[#1a1a1a]/10 pt-2 space-y-1'>
+            <p className='workspace-mono text-[9.5px] uppercase tracking-[0.12em] text-[#1a1a1a]/35'>Request steps</p>
+            {steps.map((item, index) => (
+              <div key={`${item?.step}-${index}`} className='workspace-mono text-[10px] text-[#1a1a1a]/45'>
+                {index + 1}. {item?.step}
+              </div>
+            ))}
+            {traceId && (
+              <div className='workspace-mono text-[9.5px] text-[#1a1a1a]/30'>trace: {traceId}</div>
+            )}
+          </div>
+        )}
       </div>
 
       {lightBox &&
