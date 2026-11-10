@@ -135,6 +135,9 @@ async def coding_agent(state: AgentState) -> AgentState:
     try:
         await check_rate_limit(state["user_id"], "coding")
 
+        steps = list(state.get("steps") or [])
+        steps.append({"step": "classifying_intent", "ts": time.time()})
+
         intent_llm = get_model("intent")
         code_llm   = get_model("coding")
 
@@ -145,6 +148,7 @@ async def coding_agent(state: AgentState) -> AgentState:
         if intent == "CODE_GENERATION":
             files = []
             try:
+                steps.append({"step": "generating_code", "ts": time.time()})
                 data = await invoke_json(
                     code_llm,
                     CODE_GEN_PROMPT + state["prompt"],
@@ -170,19 +174,22 @@ async def coding_agent(state: AgentState) -> AgentState:
                             "title": state["prompt"],
                         }
                     ],
+                    "steps": steps,
                 }
 
+            steps.append({"step": "generating_response", "ts": time.time()})
             res = await code_llm.ainvoke(CODE_FALLBACK_PROMPT + state["prompt"])
             await deduct_credits(state["user_id"], "coding")
-            return {**state, "ai_response": res.content, "artifacts": []}
+            return {**state, "ai_response": res.content, "artifacts": [], "steps": steps}
 
         # All other intents — Markdown explanation
+        steps.append({"step": "generating_response", "ts": time.time()})
         res = await code_llm.ainvoke(
             REVIEW_PROMPT.format(intent=intent, prompt=state["prompt"])
         )
         await deduct_credits(state["user_id"], "coding")
 
-        return {**state, "ai_response": res.content, "artifacts": []}
+        return {**state, "ai_response": res.content, "artifacts": [], "steps": steps}
 
     except Exception as e:
         logger.error("coding_agent error: %s", e, exc_info=True)
@@ -193,5 +200,6 @@ async def coding_agent(state: AgentState) -> AgentState:
             **state,
             "ai_response": str(getattr(e, "detail", "Failed to generate code.")),
             "artifacts": [],
+            "steps": state.get("steps"),
         }
 
