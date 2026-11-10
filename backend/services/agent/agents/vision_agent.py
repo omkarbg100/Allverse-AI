@@ -47,10 +47,14 @@ async def vision_agent(state: AgentState) -> AgentState:
     try:
         await check_rate_limit(state["user_id"], "image")
 
+        steps = list(state.get("steps") or [])
+        steps.append({"step": "enhancing_prompt", "ts": time.time()})
+
         llm = get_model("image")
         res = await llm.ainvoke(ENHANCE_PROMPT + state["prompt"])
         enhanced_prompt = res.content.strip()
 
+        steps.append({"step": "generating_image", "ts": time.time()})
         image_url = (
             f"https://image.pollinations.ai/prompt/"
             f"{urllib.parse.quote(enhanced_prompt)}"
@@ -62,6 +66,7 @@ async def vision_agent(state: AgentState) -> AgentState:
 
         img_bytes = img_resp.content
         filename = f"image-{int(time.time() * 1000)}.png"
+        steps.append({"step": "uploading_file", "ts": time.time()})
         await upload_to_s3(filename, img_bytes, "image/png")
         await deduct_credits(state["user_id"], "vision")
         url = await get_from_s3(filename, expires_in=600)
@@ -69,10 +74,11 @@ async def vision_agent(state: AgentState) -> AgentState:
         return {
             **state,
             "ai_response": (
-                f"![Generated Image]({url})\n\n"
-                f"[⬇ Download Image]({url})\n\n"
+                f"![Generated Image]({url})\\n\\n"
+                f"[⬇ Download Image]({url})\\n\\n"
                 f"_Link expires in 10 minutes._"
             ),
+            "steps": steps,
         }
 
     except Exception as e:
@@ -80,5 +86,5 @@ async def vision_agent(state: AgentState) -> AgentState:
         error_msg = getattr(e, "detail", None)
         if isinstance(error_msg, dict):
             raise
-        return {**state, "ai_response": str(getattr(e, "detail", "Failed to generate image."))}
+        return {**state, "ai_response": str(getattr(e, "detail", "Failed to generate image.")), "steps": state.get("steps")}
 
