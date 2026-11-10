@@ -6,6 +6,7 @@ Flow: check rate limit → get Redis memory → build messages → invoke LLM
 """
 
 import logging
+import time
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from config.llm_models import get_model
@@ -69,15 +70,18 @@ Formatting:
 
         messages.append(HumanMessage(content=state["prompt"]))
 
+        steps = list(state.get("steps") or [])
+        steps.append({"step": "generating_response", "ts": time.time()})
+
         response = await llm.ainvoke(messages)
         await deduct_credits(state["user_id"], "chat")
 
-        return {**state, "ai_response": response.content}
+        return {**state, "ai_response": response.content, "steps": steps}
 
     except Exception as e:
         logger.error("chat_agent error: %s", e, exc_info=True)
         error_msg = getattr(e, "detail", None)
         if isinstance(error_msg, dict):
             raise  # re-raise HTTPException (rate limit)
-        return {**state, "ai_response": str(getattr(e, "detail", "Failed to generate chat response."))}
+        return {**state, "ai_response": str(getattr(e, "detail", "Failed to generate chat response.")), "steps": state.get("steps")}
 
