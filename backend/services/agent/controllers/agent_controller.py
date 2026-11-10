@@ -96,8 +96,6 @@ async def handle_agent(
     await _save_message(conversation_id, "user", prompt, attachments=attachments)
 
     # ── 3. Invoke LangGraph ────────────────────────────────────────
-    add_step("thinking")
-    add_step(f"running_{agent or 'auto'}")
     result = await graph.ainvoke(
         {
             "prompt":          prompt,
@@ -105,10 +103,14 @@ async def handle_agent(
             "agent":           agent,
             "user_id":         x_user_id,
             "file":            file_meta,
+            "steps":           steps,
         }
     )
 
-    add_step("completed")
+    steps = list(result.get("steps") or steps)
+    completed_entry = {"step": "completed", "ts": time.time()}
+    steps.append(completed_entry)
+    logger.info("trace=%s step=completed", trace_id)
 
     logger.info("graph result agent=%s ai_response_len=%s",
                 result.get("agent"), len(result.get("ai_response") or ""))
