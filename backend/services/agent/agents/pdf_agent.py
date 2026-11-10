@@ -57,6 +57,10 @@ async def pdf_agent(state: AgentState) -> AgentState:
     try:
         await check_rate_limit(state["user_id"], "pdf")
 
+        steps = list(state.get("steps") or [])
+        if state.get("file", {}).get("mimetype") == "application/pdf":
+            steps.append({"step": "reading_source", "ts": time.time()})
+
         source = _read_source_document(state.get("file"))
         user_request = state["prompt"]
         if source:
@@ -69,6 +73,7 @@ async def pdf_agent(state: AgentState) -> AgentState:
             )
 
         llm = get_model("pdf")
+        steps.append({"step": "generating_document", "ts": time.time()})
         data = await invoke_json(
             llm,
             PDF_JSON_PROMPT + user_request,
@@ -81,6 +86,7 @@ async def pdf_agent(state: AgentState) -> AgentState:
 
         pdf_bytes = generate_pdf(data)
         filename = f"pdf-{int(time.time() * 1000)}.pdf"
+        steps.append({"step": "uploading_file", "ts": time.time()})
         await upload_to_s3(filename, pdf_bytes, "application/pdf")
         url = await get_from_s3(filename, expires_in=600)
         await deduct_credits(state["user_id"], "pdf")
@@ -88,11 +94,12 @@ async def pdf_agent(state: AgentState) -> AgentState:
         return {
             **state,
             "ai_response": (
-                f"# PDF Generated\n\n"
-                f"**{data.get('title', '')}**\n\n"
-                f"[⬇ Download PDF]({url})\n\n"
+                f"# PDF Generated\\n\\n"
+                f"**{data.get('title', '')}**\\n\\n"
+                f"[⬇ Download PDF]({url})\\n\\n"
                 f"_Link expires in 10 minutes._"
             ),
+            "steps": steps,
         }
 
     except Exception as e:
@@ -100,4 +107,4 @@ async def pdf_agent(state: AgentState) -> AgentState:
         error_msg = getattr(e, "detail", None)
         if isinstance(error_msg, dict):
             raise
-        return {**state, "ai_response": str(getattr(e, "detail", "Failed to generate PDF."))}
+        return {**state, "ai_response": str(getattr(e, "detail", "Failed to generate PDF.")), "steps": state.get("steps")}
