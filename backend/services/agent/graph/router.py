@@ -13,6 +13,7 @@ single-word labels and tend to over-route ordinary questions to PDF/PPT.
 
 import logging
 import re
+import time
 
 from graph.state import AgentState
 
@@ -91,20 +92,24 @@ def classify_prompt(prompt: str) -> str:
 async def router_node(state: AgentState) -> AgentState:
     # 1. Explicitly chosen agent (not auto)
     if state.get("agent") and state["agent"] != "auto":
-        return state
-
-    # 2. Auto-detect from uploaded file MIME type
-    if state.get("file"):
+        agent = state["agent"]
+    elif state.get("file"):
         mime = state["file"].get("mimetype", "")
         if mime == "application/pdf":
             if PDF_REWRITE_PATTERN.search(state["prompt"].lower()):
-                return {**state, "agent": "pdf"}
-            return {**state, "agent": "pdf_rag"}
-        if mime.startswith("image/"):
-            return {**state, "agent": "image_analyzer"}
+                agent = "pdf"
+            else:
+                agent = "pdf_rag"
+        elif mime.startswith("image/"):
+            agent = "image_analyzer"
+        else:
+            agent = classify_prompt(state["prompt"])
+    else:
+        # 3. Deterministic keyword classification
+        agent = classify_prompt(state["prompt"])
 
-    # 3. Deterministic keyword classification
-    agent = classify_prompt(state["prompt"])
+    steps = list(state.get("steps") or [])
+    steps.append({"step": f"routing_to_{agent}", "ts": time.time()})
 
     logger.info("router_node → %s", agent)
-    return {**state, "agent": agent}
+    return {**state, "agent": agent, "steps": steps}
