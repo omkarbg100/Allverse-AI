@@ -11,6 +11,7 @@ Flow:
 import base64
 import logging
 import os
+import time
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
@@ -39,11 +40,16 @@ async def image_analyzer_agent(state: AgentState) -> AgentState:
     try:
         await check_rate_limit(state["user_id"], "image")
 
+        steps = list(state.get("steps") or [])
+        steps.append({"step": "reading_image", "ts": time.time()})
+
         with open(file_path, "rb") as f:
             b64 = base64.b64encode(f.read()).decode()
 
         mime = state["file"]["mimetype"]
         llm  = get_model("image_analyzer")
+
+        steps.append({"step": "analyzing_image", "ts": time.time()})
 
         messages = [
             SystemMessage(content=IMAGE_ANALYZER_SYSTEM),
@@ -58,14 +64,14 @@ async def image_analyzer_agent(state: AgentState) -> AgentState:
         response = await llm.ainvoke(messages)
         await deduct_credits(state["user_id"], "vision")
 
-        return {**state, "ai_response": response.content}
+        return {**state, "ai_response": response.content, "steps": steps}
 
     except Exception as e:
         logger.error("image_analyzer_agent error: %s", e, exc_info=True)
         error_msg = getattr(e, "detail", None)
         if isinstance(error_msg, dict):
             raise
-        return {**state, "ai_response": str(getattr(e, "detail", "Failed to analyze image."))}
+        return {**state, "ai_response": str(getattr(e, "detail", "Failed to analyze image.")), "steps": state.get("steps")}
 
     finally:
         if file_path and os.path.exists(file_path):
