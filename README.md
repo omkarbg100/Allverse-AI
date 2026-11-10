@@ -523,4 +523,4 @@ This project is intended for educational and development purposes. Review the re
 
 ## Request Tracing
 
-The `/chat` endpoint returns `trace_id` and `steps` for every request. `steps` contains the request lifecycle (`received_request`, `persisting_user_message`, `thinking`, `running_<agent>`, `completed`). The frontend renders these steps in the assistant message bubble and logs them server-side with the matching `trace_id`.
+The `/chat` endpoint returns `trace_id` and `steps` for every request. `steps` now reflects the real agent flow, including routing and agent-specific work such as `routing_to_<agent>`, `searching_web`, `generating_response`, `reading_source`, `generating_document`, `uploading_file`, and `completed`. The frontend renders these steps in the assistant message bubble and logs them server-side with the matching `trace_id`.
