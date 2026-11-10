@@ -15,4 +15,5 @@ class AgentState(TypedDict, total=False):
     artifacts:       Optional[list[Any]]
     user_id:         str
     file:            Optional[dict]       # {path, mimetype, filename}
+    steps:           Optional[list[dict]]  # request trace steps carried through graph
 
