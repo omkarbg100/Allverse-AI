@@ -43,6 +43,9 @@ async def ppt_agent(state: AgentState) -> AgentState:
     try:
         await check_rate_limit(state["user_id"], "ppt")
 
+        steps = list(state.get("steps") or [])
+        steps.append({"step": "generating_presentation", "ts": time.time()})
+
         llm = get_model("ppt")
         data = await invoke_json(
             llm,
@@ -60,6 +63,7 @@ async def ppt_agent(state: AgentState) -> AgentState:
             "application/vnd.openxmlformats-officedocument"
             ".presentationml.presentation"
         )
+        steps.append({"step": "uploading_file", "ts": time.time()})
         await upload_to_s3(filename, ppt_bytes, content_type)
         url = await get_from_s3(filename, expires_in=600)
         await deduct_credits(state["user_id"], "ppt")
@@ -67,11 +71,12 @@ async def ppt_agent(state: AgentState) -> AgentState:
         return {
             **state,
             "ai_response": (
-                f"# Presentation Generated\n\n"
-                f"**{data.get('title', '')}**\n\n"
-                f"[⬇ Download PPT]({url})\n\n"
+                f"# Presentation Generated\\n\\n"
+                f"**{data.get('title', '')}**\\n\\n"
+                f"[⬇ Download PPT]({url})\\n\\n"
                 f"_Link expires in 10 minutes._"
             ),
+            "steps": steps,
         }
 
     except Exception as e:
@@ -79,5 +84,5 @@ async def ppt_agent(state: AgentState) -> AgentState:
         error_msg = getattr(e, "detail", None)
         if isinstance(error_msg, dict):
             raise
-        return {**state, "ai_response": str(getattr(e, "detail", "Failed to generate presentation."))}
+        return {**state, "ai_response": str(getattr(e, "detail", "Failed to generate presentation.")), "steps": state.get("steps")}
 
