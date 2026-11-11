@@ -1,3 +1,4 @@
+# Uses a single IAM user (AWS_ACCESS_KEY / AWS_SECRET_ACCESS_KEY) for all AWS operations.
 name: allverse ai deployment
 
 on:
