@@ -34,7 +34,7 @@
 
 **Allverse AI** is a multi-agent AI platform that combines several specialized AI workflows in a single chat workspace.
 
-A user request enters through the React frontend and the API Gateway, then a LangGraph router sends it to the right specialist agent. Agents can call a local LLM through a LiteLLM gateway, use web search, generate documents and presentations, create images, or read uploaded PDFs.
+A user request enters through the React frontend and the API Gateway, then the chat service forwards it to the Python agent service, where a LangGraph router sends it to the right specialist agent. Agents can call a local LLM through a LiteLLM gateway, use web search, generate documents and presentations, create images, or read uploaded PDFs.
 
 The platform is built as a set of independently deployable services:
 
@@ -174,7 +174,7 @@ The router is deterministic and runs inside the LangGraph workflow.
 | PDF upload + rewrite/create keywords | PDF |
 | PDF upload + question | PDF RAG |
 | Image upload | Image Analyzer |
-| Questions about PDFs, documents, downloads | PDF |
+| Prompts mentioning PDFs or downloadable documents/reports | PDF |
 | Prompts mentioning PPT, slides, presentation, deck | PPT |
 | Prompts asking to draw, design, or generate images | Vision |
 | Prompts mentioning latest/news/web search/weather | Search |
@@ -247,7 +247,7 @@ allverse-ai/
 │       ├── billing/                   # Billing service (:8004)
 │       └── agent/                     # FastAPI AI service (:8003)
 │           ├── agents/                # Chat, search, coding, pdf, ppt, vision, ...
-│           ├── config/                # Settings, model factory, Redis, S3, Tavily
+│           ├── config/                # Settings, LLM models, Redis, S3, Tavily, vector DB
 │           ├── controllers/
 │           ├── graph/                 # LangGraph state, router, workflow
 │           ├── routes/
@@ -534,4 +534,4 @@ This project is intended for educational and development purposes. Review the re
 
 ## Request Tracing
 
-The `/chat` endpoint returns `trace_id` and `steps` for every request. `steps` now reflects the real agent flow, including routing and agent-specific work such as `routing_to_<agent>`, `searching_web`, `generating_response`, `reading_source`, `generating_document`, `uploading_file`, and `completed`. The frontend renders these steps in the assistant message bubble and logs them server-side with the matching `trace_id`.
+The `/api/agent/chat` endpoint returns `trace_id` and `steps` for every request. `steps` now reflects the real agent flow, including routing and agent-specific work such as `routing_to_<agent>`, `searching_web`, `generating_response`, `reading_source`, `generating_document`, `uploading_file`, and `completed`. The frontend renders these steps in the assistant message bubble and logs them server-side with the matching `trace_id`.
