@@ -95,7 +95,7 @@ Variables:
 
 ### LLM via Groq API
 
-No local model or GPU instance is needed. Set `GROQ_API_KEY` (and optionally `GROQ_CHAT_MODEL` / `GROQ_VISION_MODEL`) on the agent service. The agent calls Groq directly.
+No local model or GPU instance is needed. LiteLLM on Fargate proxies to the Groq API. Set `GROQ_API_KEY` (and optionally `GROQ_CHAT_MODEL` / `GROQ_VISION_MODEL`) on the agent service.
 
 ---
 

@@ -41,6 +41,8 @@ jobs:
             docker build --build-arg LITELLM_BASE_IMAGE="ghcr.io/berriai/litellm:$UPSTREAM_TAG" -f images/litellm/Dockerfile -t "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/litellm:$HASH" images/litellm
             docker push "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/litellm:$HASH"
           fi
+          docker tag "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/litellm:$HASH" "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/litellm:latest"
+          docker push "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/litellm:latest"
 
       - name: Build Gateway
         run: |
@@ -76,10 +78,10 @@ jobs:
         env:
           ECS_CLUSTER: ${{ secrets.ECS_CLUSTER }}
         run: |
-          for svc in ${{ secrets.GATEWAY_SERVICE }} ${{ secrets.AUTH_SERVICE }} ${{ secrets.CHAT_SERVICE }} ${{ secrets.AGENT_SERVICE }} ${{ secrets.BILLING_SERVICE }}; do
+          for svc in ${{ secrets.GATEWAY_SERVICE }} ${{ secrets.AUTH_SERVICE }} ${{ secrets.CHAT_SERVICE }} ${{ secrets.AGENT_SERVICE }} ${{ secrets.BILLING_SERVICE }} litellm-service; do
             aws ecs update-service --cluster "$ECS_CLUSTER" --service "$svc" --force-new-deployment --region "$AWS_REGION" >/dev/null
           done
-          aws ecs wait services-stable --cluster "$ECS_CLUSTER" --services ${{ secrets.GATEWAY_SERVICE }} ${{ secrets.AUTH_SERVICE }} ${{ secrets.CHAT_SERVICE }} ${{ secrets.AGENT_SERVICE }} ${{ secrets.BILLING_SERVICE }} --region "$AWS_REGION"
+          aws ecs wait services-stable --cluster "$ECS_CLUSTER" --services ${{ secrets.GATEWAY_SERVICE }} ${{ secrets.AUTH_SERVICE }} ${{ secrets.CHAT_SERVICE }} ${{ secrets.AGENT_SERVICE }} ${{ secrets.BILLING_SERVICE }} litellm-service --region "$AWS_REGION"
 
   deploy-frontend:
     needs: deploy-backend
