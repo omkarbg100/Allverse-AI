@@ -44,25 +44,8 @@ services:
     networks:
       - allverse-net
 
-  # ── 2. LiteLLM Unified Gateway ─────────────────────────────────
-  litellm:
-    image: ghcr.io/berriai/litellm:main-latest
-    container_name: allverse-litellm
-    restart: unless-stopped
-    ports:
-      - "4001:4000"
-    volumes:
-      - ./litellm/config.yaml:/app/config.yaml
-    environment:
-      - GROQ_API_KEY=${GROQ_API_KEY:-}
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
-      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY:-sk-allverse-litellm-master-key}
-    command: ["--config", "/app/config.yaml", "--port", "4000", "--num_workers", "1"]
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    networks:
-      - allverse-net
+   # ── 2. LLM Provider: Groq (external API, no container) ──────────
+   # Groq is called directly by the agent service via GROQ_API_KEY.
 
   # ── 3. Node.js Backend Microservices ──────────────────────────
   auth:
@@ -141,10 +124,6 @@ services:
       - ./backend/services/agent/.env
     environment:
       - PORT=8003
-      - LITELLM_URL=http://litellm:4000
-      - LITELLM_API_KEY=${LITELLM_MASTER_KEY:-sk-allverse-litellm-master-key}
-      - USE_LITELLM=true
-      - OLLAMA_HOST=http://host.docker.internal:11434
       - REDIS_URL=redis://redis:6379
       - MONGODB_URI=mongodb://mongodb:27017/allverse_ai
       - AUTH_SERVICE=http://auth:8001
@@ -155,14 +134,12 @@ services:
       - AWS_SECRET_KEY=minioadmin
       - AWS_BUCKET_NAME=agent-files
       - QDRANT_URL=http://qdrant:6333
+      - QDRANT_API_KEY=${QDRANT_API_KEY:-}
       - GROQ_API_KEY=${GROQ_API_KEY:-}
       - TAVILY_API_KEY=${TAVILY_API_KEY:-}
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     volumes:
       - fastembed-cache:/app/.cache/fastembed
     depends_on:
-      - litellm
       - redis
       - qdrant
       - s3mock

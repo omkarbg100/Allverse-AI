@@ -1,6 +1,5 @@
 """
-LLM Model Factory — LiteLLM proxy primary (unified gateway to local Ollama & Groq),
-with direct Ollama and Groq fallbacks.
+LLM Model Factory — Groq API (primary and only provider).
 
 Usage:
     llm = get_model("chat")
@@ -8,34 +7,12 @@ Usage:
 """
 
 import logging
-import httpx
-from langchain_ollama import ChatOllama
 from langchain_groq import ChatGroq
 from .settings import settings
 
 logger = logging.getLogger(__name__)
 
 # ── Model name maps ────────────────────────────────────────────────
-
-OLLAMA_MODEL_MAP: dict[str, str] = {
-    "router":         settings.OLLAMA_CHAT_MODEL,
-    "chat":           settings.OLLAMA_CHAT_MODEL,
-    "search":         settings.OLLAMA_CHAT_MODEL,
-    "intent":         settings.OLLAMA_CHAT_MODEL,
-    "coding":         settings.OLLAMA_CODING_MODEL,
-    "pdf":            settings.OLLAMA_CHAT_MODEL,
-    "ppt":            settings.OLLAMA_CHAT_MODEL,
-    "pdf_rag":        settings.OLLAMA_CHAT_MODEL,
-    "image_analyzer": settings.OLLAMA_VISION_MODEL,
-    "image":          settings.OLLAMA_CHAT_MODEL,
-}
-
-STRUCTURED_AGENTS = {"intent", "coding", "pdf", "ppt"}
-
-
-def _temperature(agent: str) -> float:
-    return 0.2 if agent in STRUCTURED_AGENTS else 0.7
-
 
 GROQ_MODEL_MAP: dict[str, str] = {
     "router":         settings.GROQ_CHAT_MODEL,
@@ -50,37 +27,16 @@ GROQ_MODEL_MAP: dict[str, str] = {
     "image":          settings.GROQ_CHAT_MODEL,
 }
 
-
-def _build_litellm(agent: str):
-    """LiteLLM exposes standard OpenAI-compatible completions API."""
-    model = OLLAMA_MODEL_MAP.get(agent, settings.OLLAMA_CHAT_MODEL)
-    try:
-        from langchain_openai import ChatOpenAI
-    except ImportError:
-        from langchain_community.chat_models import ChatOpenAI
-
-    return ChatOpenAI(
-        model=model,
-        base_url=f"{settings.LITELLM_URL}/v1",
-        api_key=settings.LITELLM_API_KEY or "sk-allverse-litellm-master-key",
-        temperature=_temperature(agent),
-        max_tokens=4096,
-    )
+STRUCTURED_AGENTS = {"intent", "coding", "pdf", "ppt"}
 
 
-def _build_ollama(agent: str):
-    model = OLLAMA_MODEL_MAP.get(agent, settings.OLLAMA_CHAT_MODEL)
-    return ChatOllama(
-        model=model,
-        base_url=settings.OLLAMA_HOST,
-        temperature=_temperature(agent),
-        num_predict=4096,
-    )
+def _temperature(agent: str) -> float:
+    return 0.2 if agent in STRUCTURED_AGENTS else 0.7
 
 
 def _build_groq(agent: str):
     if not settings.GROQ_API_KEY:
-        raise ValueError("GROQ_API_KEY not set — cannot use Groq fallback.")
+        raise ValueError("GROQ_API_KEY not set — cannot use Groq.")
     model = GROQ_MODEL_MAP.get(agent, settings.GROQ_CHAT_MODEL)
     return ChatGroq(
         model=model,
@@ -91,36 +47,6 @@ def _build_groq(agent: str):
 
 
 def get_model(agent: str):
-    """
-    Returns a LangChain chat model:
-      1. Tries LiteLLM unified gateway first (routes to Ollama / Groq / custom providers)
-      2. Falls back to direct Ollama on host
-      3. Falls back to Groq if Ollama is unavailable
-    """
-    # 1. Try LiteLLM gateway if configured
-    if settings.USE_LITELLM and settings.LITELLM_URL:
-        try:
-            resp = httpx.get(f"{settings.LITELLM_URL}/health/readiness", timeout=2)
-            if resp.status_code == 200:
-                logger.debug("Using LiteLLM gateway for agent=%s", agent)
-                return _build_litellm(agent)
-        except Exception:
-            try:
-                # Some versions respond at /health
-                resp = httpx.get(f"{settings.LITELLM_URL}/health", timeout=2)
-                if resp.status_code == 200:
-                    logger.debug("Using LiteLLM gateway for agent=%s", agent)
-                    return _build_litellm(agent)
-            except Exception:
-                pass
-
-    # 2. Try direct Ollama
-    try:
-        llm = _build_ollama(agent)
-        resp = httpx.get(f"{settings.OLLAMA_HOST}/api/tags", timeout=3)
-        resp.raise_for_status()
-        logger.debug("Using direct Ollama for agent=%s model=%s", agent, OLLAMA_MODEL_MAP.get(agent))
-        return llm
-    except Exception as e:
-        logger.warning("Ollama unavailable (%s), falling back to Groq for agent=%s", e, agent)
-        return _build_groq(agent)
+    """Returns a LangChain chat model backed by the Groq API."""
+    logger.debug("Using Groq for agent=%s model=%s", agent, GROQ_MODEL_MAP.get(agent))
+    return _build_groq(agent)

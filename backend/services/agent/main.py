@@ -35,8 +35,8 @@ async def lifespan(app: FastAPI):
     temp = Path(__file__).parent / "temp"
     temp.mkdir(exist_ok=True)
     logger.info("Allverse AI Service starting on port %s", settings.PORT)
-    logger.info("Ollama host: %s", settings.OLLAMA_HOST)
-    logger.info("Groq fallback: %s", "enabled" if settings.GROQ_API_KEY else "disabled (no key)")
+    logger.info("LLM provider: Groq (%s)", settings.GROQ_CHAT_MODEL)
+    logger.info("Groq: %s", "enabled" if settings.GROQ_API_KEY else "disabled (no key)")
     yield
     logger.info("Allverse AI Service shutting down.")
 

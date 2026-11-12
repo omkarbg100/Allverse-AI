@@ -11,25 +11,14 @@ class Settings(BaseSettings):
 
     PORT: int = 8003
 
-    # ── LiteLLM (unified gateway) ──────────────────────────────
-    LITELLM_URL: str = "http://litellm:4000"
-    LITELLM_API_KEY: str = "sk-allverse-litellm-master-key"
-    USE_LITELLM: bool = True
-
-    # ── Ollama ──────────────────────────────────────────────────
-    OLLAMA_HOST: str = "http://host.docker.internal:11434"
-    OLLAMA_CHAT_MODEL: str = "llama3.2:3b"
-    OLLAMA_CODING_MODEL: str = "llama3.2:3b"
-    OLLAMA_VISION_MODEL: str = "llama3.2:3b"
+    # ── Groq (primary LLM provider) ─────────────────────────────
+    GROQ_API_KEY: str = ""
+    GROQ_CHAT_MODEL: str = "openai/gpt-oss-120b"
+    GROQ_VISION_MODEL: str = "qwen/qwen3.6-27b"
 
     # ── Embeddings (FastEmbed, runs inside the agent container) ──
     EMBEDDING_MODEL: str = "BAAI/bge-small-en-v1.5"
     FASTEMBED_CACHE_PATH: str = "/app/.cache/fastembed"
-
-    # ── Groq (fallback) ─────────────────────────────────────────
-    GROQ_API_KEY: str = ""
-    GROQ_CHAT_MODEL: str = "llama-3.3-70b-versatile"
-    GROQ_VISION_MODEL: str = "llama-3.2-90b-vision-preview"
 
     # ── Redis ───────────────────────────────────────────────────
     REDIS_URL: str = "redis://redis:6379"
@@ -49,8 +38,9 @@ class Settings(BaseSettings):
     MINIO_ENDPOINT: str = ""
     S3_PUBLIC_ENDPOINT: str = ""
 
-    # ── Qdrant ──────────────────────────────────────────────────
+    # ── Qdrant (Qdrant Cloud or self-hosted) ───────────────────
     QDRANT_URL: str = "http://qdrant:6333"
+    QDRANT_API_KEY: str = ""
 
     # ── Tavily ──────────────────────────────────────────────────
     TAVILY_API_KEY: str = ""

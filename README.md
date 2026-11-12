@@ -496,9 +496,11 @@ curl -s http://localhost:4001/v1/chat/completions \
 The repository includes an ECS deployment toolkit in [`deploy/aws/`](deploy/aws/README.md).
 It extends the existing five application services with:
 
-- `redis-service`, `mongodb-service`, `qdrant-service`, `litellm-service` on Fargate
-- `ollama-service` on GPU-backed EC2 (Fargate has no GPU support)
-- EFS access points for MongoDB, Redis, Qdrant and Ollama model storage
+- `litellm-service` removed; LLM via Groq API
+- `redis`, `mongodb`, `qdrant` on EC2 with EBS volumes (or managed tiers/Atlas)
+- No GPU EC2 needed (Groq handles inference)
+- Cloud Map private DNS (`allverse.local`) for internal service-to-service traffic
+- Cloud Map private DNS (`allverse.local`) for internal service-to-service traffic
 - Cloud Map private DNS (`allverse.local`) for internal service-to-service traffic
 - S3 access through the ECS task role (no static AWS keys)
 

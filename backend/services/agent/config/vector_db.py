@@ -27,6 +27,7 @@ async def build_vector_store(
         documents=docs,
         embedding=embeddings,
         url=settings.QDRANT_URL,
+        api_key=settings.QDRANT_API_KEY or None,
         collection_name=collection_name,
         force_recreate=force_recreate,
     )
