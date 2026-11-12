@@ -11,6 +11,11 @@ class Settings(BaseSettings):
 
     PORT: int = 8003
 
+    # ── LiteLLM (unified gateway -> Groq) ──────────────────────
+    LITELLM_URL: str = "http://litellm:4000"
+    LITELLM_API_KEY: str = "sk-allverse-litellm-master-key"
+    USE_LITELLM: bool = True
+
     # ── Groq (primary LLM provider) ─────────────────────────────
     GROQ_API_KEY: str = ""
     GROQ_CHAT_MODEL: str = "openai/gpt-oss-120b"
@@ -24,7 +29,7 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://redis:6379"
 
     # ── MongoDB ─────────────────────────────────────────────────
-    MONGODB_URI: str = "mongodb://mongodb:27017/allverse_ai"
+    MONGODB_URI: str = "mongodb+srv://user:pass@cluster.mongodb.net/allverse_ai"
 
     # ── Internal service URLs ────────────────────────────────────
     CHAT_SERVICE: str = "http://chat:8002"

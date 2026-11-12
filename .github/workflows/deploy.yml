@@ -29,6 +29,19 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
+      - name: Build and push litellm if changed
+        env:
+          UPSTREAM_TAG: ${{ vars.LITELLM_UPSTREAM_TAG || 'main-latest' }}
+        run: |
+          set -euo pipefail
+          HASH=$( { find images/litellm -type f -print0 | sort -z | xargs -0 sha256sum; printf 'base=%s\n' "$UPSTREAM_TAG"; } | sha256sum | cut -c1-12 )
+          if aws ecr describe-images --repository-name litellm --image-ids imageTag="$HASH" --region "$AWS_REGION" >/dev/null 2>&1; then
+            echo "litellm:$HASH already in ECR, skipping"
+          else
+            docker build --build-arg LITELLM_BASE_IMAGE="ghcr.io/berriai/litellm:$UPSTREAM_TAG" -f images/litellm/Dockerfile -t "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/litellm:$HASH" images/litellm
+            docker push "$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/litellm:$HASH"
+          fi
+
       - name: Build Gateway
         run: |
           docker build -f backend/gateway/Dockerfile -t gateway backend

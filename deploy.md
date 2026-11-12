@@ -10,7 +10,7 @@ Pipeline jobs:
 1. deploy-backend - builds/pushes gateway, auth-service, chat-service, agent-service, billing-service as latest, force-redeploys the 5 app ECS services.
 2. deploy-frontend - builds Vite with VITE_SERVER_URL, VITE_ALLOW_DEV_LOGIN, VITE_FIREBASE_API_KEY, VITE_RAZORPAY_KEY_ID, syncs frontend/dist to S3_BUCKET, invalidates CloudFront.
 
-ECR repos (exact): gateway, auth-service, chat-service, agent-service, billing-service. (redis/mongodb/qdrant only if self-hosting infra; ollama and litellm no longer used.)
+ECR repos (exact): litellm, gateway, auth-service, chat-service, agent-service, billing-service. (redis uses public image; mongodb/qdrant not used — Atlas/Qdrant Cloud.)
 
 ECS services (names must equal GitHub secret values): GATEWAY_SERVICE, AUTH_SERVICE, CHAT_SERVICE, AGENT_SERVICE, BILLING_SERVICE (plus infra services).
 
@@ -52,27 +52,25 @@ No OIDC provider is needed.
 
 ECR -> Private repositories -> Create repository (Private, scan on push).
 
-Create these 8: redis, mongodb, qdrant, gateway, auth-service, chat-service, agent-service, billing-service. (ollama and litellm no longer needed.)
+Create these 7: litellm, gateway, auth-service, chat-service, agent-service, billing-service. (redis uses the public redis:7 image; mongodb/qdrant not used — Atlas/Qdrant Cloud.)
 
 ---
 
 ## 3. ECS Cluster
 
 ECS -> Clusters -> Create cluster.
-- Name: allverse-cluster, infrastructure AWS Fargate (plus EC2 for stateful services and GPU).
+- Name: allverse-cluster, infrastructure AWS Fargate.
 
 Use the default VPC if available; otherwise create a VPC with at least 2 subnets. Security groups still required.
 
-Use ECS Service Connect for internal communication. Enable it on each service and set client aliases (auth, chat, agent, billing, gateway, redis, mongodb, qdrant, litellm, ollama). Then use those aliases in env vars (e.g. http://auth:8001).
+Use ECS Service Connect for internal communication. Enable it on each service and set client aliases (auth, chat, agent, billing, gateway, litellm, redis). Then use those aliases in env vars (e.g. http://auth:8001).
 
-## 3.1 Persistent Data on EC2 (EBS volumes) / Managed tiers
+## 3.1 Persistent Data / Managed Services (no EC2)
 
-Stateful services (mongodb, redis, qdrant) run on EC2 instances with EBS volumes or managed tiers (MongoDB Atlas, Upstash Redis, Qdrant Cloud). Launch EC2 instances, attach EBS volumes, mount them, and run the containers with bind mounts:
-- mongodb: /data/db (skip if using Atlas)
-- redis: /data (skip if using Upstash)
-- qdrant: /qdrant/storage (skip if using Qdrant Cloud)
-
-No GPU instance is needed; LLM inference uses the Groq API. Expose ports 27017, 6379, 6333 only to allverse-ecs-sg so Fargate tasks reach them via the EC2 private IPs.
+- MongoDB: use MongoDB Atlas (set MONGODB_URI to Atlas connection string).
+- Qdrant: use Qdrant Cloud (set QDRANT_URL + QDRANT_API_KEY).
+- Redis: run on ECS Fargate (ephemeral; no volume). Use public redis image.
+- LLM: Groq via LiteLLM on ECS Fargate. No GPU/EC2.
 
 ---
 
@@ -92,11 +90,14 @@ Execution role and task role: allverse-all-role (both).
 
 Agent env (production):
 - PORT=8003
+- LITELLM_URL=http://litellm:4000
+- LITELLM_API_KEY=<strong key>
+- USE_LITELLM=true
 - GROQ_API_KEY=<groq key>
 - GROQ_CHAT_MODEL=openai/gpt-oss-120b (optional)
 - GROQ_VISION_MODEL=qwen/qwen3.6-27b (optional)
-- REDIS_URL=redis://<redis host>:6379 (or EC2 IP)
-- MONGODB_URI=mongodb+srv://... (Atlas) or mongodb://<host>:27017/allverse_ai
+- REDIS_URL=redis://redis:6379
+- MONGODB_URI=<Atlas connection string>
 - AUTH_SERVICE=http://auth:8001
 - CHAT_SERVICE=http://chat:8002
 - QDRANT_URL=https://<qdrant-cluster-endpoint>
@@ -120,15 +121,22 @@ Enable awslogs to CloudWatch log group /ecs/<service>.
 
 ## 4.1 Infrastructure Task Definitions (Fargate)
 
-No Fargate infra task definitions are needed: LLM uses Groq API, and Redis/MongoDB/Qdrant run on EC2 (or managed tiers). Only the 5 app task definitions (section 4) plus optional litellm (not used) remain.
+| Task | Image | Port | Volume |
+|---|---|---|---|
+| redis-task | redis:7 | 6379 | none (ephemeral) |
+| litellm-task | litellm:latest | 4000 | none |
+
+Set env vars:
+- Redis: none special.
+- LiteLLM: GROQ_API_KEY, LITELLM_MASTER_KEY.
 
 ## 5. ECS Services
 
 ECS -> Cluster -> Services -> Create (Fargate) for each:
-gateway-service, auth-service, chat-service, agent-service, billing-service.
+gateway-service, auth-service, chat-service, agent-service, billing-service, litellm-service, redis-service.
 - Desired tasks: 1.
 - VPC allverse-vpc, private subnets, SG allverse-ecs-sg, public IP disabled.
-- Service Connect: enable, and set the client alias to the service name (auth, chat, agent, billing, gateway).
+- Service Connect: enable, and set the client alias to the service name (auth, chat, agent, billing, gateway, litellm, redis).
 - Gateway: attach to ALB target group.
 
 ---
@@ -145,9 +153,14 @@ Attach target group to gateway service.
 
 ---
 
-## 7. Infrastructure Services on EC2 + Groq API
+## 7. Infrastructure Services on ECS Fargate
 
-No Ollama/GPU EC2 and no LiteLLM Fargate service are needed. LLM inference uses the Groq API (set GROQ_API_KEY on the agent). Redis, MongoDB, and Qdrant run on EC2 with EBS volumes (or use managed tiers/Atlas). Expose ports 6379, 27017, 6333 only to allverse-ecs-sg and use the EC2 private IPs in env vars (REDIS_URL, MONGODB_URI, QDRANT_URL).
+Create ECS services for redis and litellm (Fargate) in addition to the 5 app services. Enable Service Connect aliases: redis, litellm.
+
+- Redis: ephemeral, no volume.
+- LiteLLM: proxies to Groq; set GROQ_API_KEY and LITELLM_MASTER_KEY.
+
+MongoDB (Atlas) and Qdrant (Qdrant Cloud) are managed externally; set MONGODB_URI and QDRANT_URL/QDRANT_API_KEY on the agent. No EC2/EFS.
 
 ## 8. S3 Buckets
 
@@ -184,7 +197,7 @@ Secrets:
 Variables:
 - GATEWAY_PUBLIC_URL=<https endpoint>
 - FIREBASE_API_KEY, RAZORPAY_KEY_ID
-- Optional: REDIS_IMAGE_TAG, MONGODB_IMAGE_TAG, QDRANT_IMAGE_TAG, OLLAMA_IMAGE_TAG, LITELLM_UPSTREAM_TAG
+- Optional: LITELLM_UPSTREAM_TAG.
 
 ---
 
@@ -200,7 +213,7 @@ Variables:
 
 ## 12. Cost and Cleanup
 
-GPU EC2 and ALB incur charges. Stop GPU instance when not testing. Monitor Billing dashboard. To remove all: delete ECS services, cluster, EBS, EC2/ASG, ALB, CloudFront, S3, ECR, VPC.
+ALB incurs charges. Monitor Billing dashboard. To remove all: delete ECS services, cluster, ALB, CloudFront, S3, ECR, VPC.
 
 ---
 

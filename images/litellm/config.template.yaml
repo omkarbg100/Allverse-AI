@@ -1,23 +1,23 @@
 model_list:
-  - model_name: ${OLLAMA_MODEL}
+  - model_name: ${GROQ_CHAT_MODEL}
     litellm_params:
-      model: ollama/${OLLAMA_MODEL}
-      api_base: ${OLLAMA_API_BASE}
+      model: groq/${GROQ_CHAT_MODEL}
+      api_key: os.environ/GROQ_API_KEY
 
   - model_name: allverse-chat
     litellm_params:
-      model: ollama/${OLLAMA_MODEL}
-      api_base: ${OLLAMA_API_BASE}
+      model: groq/${GROQ_CHAT_MODEL}
+      api_key: os.environ/GROQ_API_KEY
 
   - model_name: allverse-coding
     litellm_params:
-      model: ollama/${OLLAMA_MODEL}
-      api_base: ${OLLAMA_API_BASE}
+      model: groq/${GROQ_CHAT_MODEL}
+      api_key: os.environ/GROQ_API_KEY
 
   - model_name: allverse-vision
     litellm_params:
-      model: ollama/${OLLAMA_MODEL}
-      api_base: ${OLLAMA_API_BASE}
+      model: groq/${GROQ_VISION_MODEL}
+      api_key: os.environ/GROQ_API_KEY
 
 router_settings:
   routing_strategy: "simple-shuffle"

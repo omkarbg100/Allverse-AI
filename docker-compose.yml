@@ -1,35 +1,11 @@
 services:
-  # ── 1. Databases & Infrastructure ─────────────────────────────
-  mongodb:
-    image: mongo:7
-    container_name: allverse-mongodb
-    restart: unless-stopped
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo-data:/data/db
-    networks:
-      - allverse-net
-
+  # ── 1. Redis (in-memory for now) ─────────────────────────────
   redis:
     image: redis:7-alpine
     container_name: allverse-redis
     restart: unless-stopped
     ports:
       - "6379:6379"
-    volumes:
-      - redis-data:/data
-    networks:
-      - allverse-net
-
-  qdrant:
-    image: qdrant/qdrant:latest
-    container_name: allverse-qdrant
-    restart: unless-stopped
-    ports:
-      - "6333:6333"
-    volumes:
-      - qdrant-data:/qdrant/storage
     networks:
       - allverse-net
 
@@ -44,8 +20,21 @@ services:
     networks:
       - allverse-net
 
-   # ── 2. LLM Provider: Groq (external API, no container) ──────────
-   # Groq is called directly by the agent service via GROQ_API_KEY.
+  # ── 2. LiteLLM Unified Gateway (proxies to Groq) ─────────────
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    container_name: allverse-litellm
+    restart: unless-stopped
+    ports:
+      - "4001:4000"
+    volumes:
+      - ./litellm/config.yaml:/app/config.yaml
+    environment:
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY:-sk-allverse-litellm-master-key}
+    command: ["--config", "/app/config.yaml", "--port", "4000", "--num_workers", "1"]
+    networks:
+      - allverse-net
 
   # ── 3. Node.js Backend Microservices ──────────────────────────
   auth:
@@ -60,11 +49,9 @@ services:
       - ./backend/services/auth/.env
     environment:
       - PORT=8001
-      - MONGODB_URI=mongodb://mongodb:27017/allverse_ai
       - REDIS_URL=redis://redis:6379
       - ALLOW_DEV_LOGIN=${ALLOW_DEV_LOGIN:-false}
     depends_on:
-      - mongodb
       - redis
     networks:
       - allverse-net
@@ -81,10 +68,8 @@ services:
       - ./backend/services/chat/.env
     environment:
       - PORT=8002
-      - MONGODB_URI=mongodb://mongodb:27017/allverse_ai
       - REDIS_URL=redis://redis:6379
     depends_on:
-      - mongodb
       - redis
     networks:
       - allverse-net
@@ -101,12 +86,10 @@ services:
       - ./backend/services/billing/.env
     environment:
       - PORT=8004
-      - MONGODB_URI=mongodb://mongodb:27017/allverse_ai
       - REDIS_URL=redis://redis:6379
       - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID:-rzp_test_placeholder}
       - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET:-rzp_secret_placeholder}
     depends_on:
-      - mongodb
       - redis
     networks:
       - allverse-net
@@ -124,24 +107,18 @@ services:
       - ./backend/services/agent/.env
     environment:
       - PORT=8003
+      - LITELLM_URL=http://litellm:4000
+      - LITELLM_API_KEY=${LITELLM_MASTER_KEY:-sk-allverse-litellm-master-key}
+      - USE_LITELLM=true
       - REDIS_URL=redis://redis:6379
-      - MONGODB_URI=mongodb://mongodb:27017/allverse_ai
-      - AUTH_SERVICE=http://auth:8001
-      - CHAT_SERVICE=http://chat:8002
-      - MINIO_ENDPOINT=http://s3mock:9090
-      - S3_PUBLIC_ENDPOINT=http://localhost:9000
-      - AWS_ACCESS_KEY_ID=minioadmin
-      - AWS_SECRET_KEY=minioadmin
-      - AWS_BUCKET_NAME=agent-files
-      - QDRANT_URL=http://qdrant:6333
       - QDRANT_API_KEY=${QDRANT_API_KEY:-}
       - GROQ_API_KEY=${GROQ_API_KEY:-}
       - TAVILY_API_KEY=${TAVILY_API_KEY:-}
     volumes:
       - fastembed-cache:/app/.cache/fastembed
     depends_on:
+      - litellm
       - redis
-      - qdrant
       - s3mock
     networks:
       - allverse-net
@@ -197,7 +174,4 @@ networks:
     driver: bridge
 
 volumes:
-  mongo-data:
-  redis-data:
-  qdrant-data:
   fastembed-cache:

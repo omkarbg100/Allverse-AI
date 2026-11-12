@@ -16,19 +16,19 @@ This document covers every deployment path for Allverse AI, the AWS services use
 
 Full stack defined in `docker-compose.yml`:
 
-- Databases/infra: MongoDB, Redis, Qdrant, S3 Mock (Adobe s3mock)
+- Infra: Redis, S3 Mock (Adobe s3mock), LiteLLM gateway
 - Node services: gateway, auth, chat, billing
 - Python agent service
 - React frontend (Vite dev server)
 
-LLM inference goes through the Groq API (set `GROQ_API_KEY`).
+MongoDB via Atlas, Qdrant via Qdrant Cloud, LLM via Groq (LiteLLM).
 
 ```bash
 cp .env.example .env
 docker compose up -d --build
 ```
 
-Service ports: frontend 5173, gateway 8000, auth 8001, chat 8002, agent 8003, billing 8004, Qdrant 6333, S3 Mock 9000, MongoDB 27017, Redis 6379.
+Service ports: frontend 5173, gateway 8000, auth 8001, chat 8002, agent 8003, billing 8004, LiteLLM 4001, S3 Mock 9000, Redis 6379.
 
 ---
 
@@ -52,8 +52,10 @@ Workflow: `.github/workflows/deploy.yml` (triggers on push to `main` or manual).
 ### Architecture
 
 - Application services (gateway, auth, chat, agent, billing) run on **ECS Fargate**.
-- **LiteLLM is no longer used**; the agent calls the **Groq API** directly.
-- **Redis, MongoDB, Qdrant run on EC2** with EBS volumes (persistent data). MongoDB can instead use **Atlas**.
+- **LiteLLM runs on ECS Fargate** (proxies to Groq API).
+- **Redis runs on ECS Fargate** (ephemeral).
+- **MongoDB via Atlas** (managed).
+- **Qdrant via Qdrant Cloud** (managed).
 - **S3 access** is granted through the **ECS task role** (no static AWS keys).
 - Frontend is built and synced to **S3**, then invalidated via **CloudFront**.
 
@@ -61,14 +63,13 @@ Workflow: `.github/workflows/deploy.yml` (triggers on push to `main` or manual).
 
 | Service | Purpose |
 |---|---|
-| Amazon ECR | Container image registry for all services (gateway, auth, chat, agent, billing) |
-| Amazon ECS (Fargate) | Runs stateless app services |
-| Amazon EC2 | Runs Redis, MongoDB, Qdrant (EBS volumes); or use managed tiers/Atlas |
+| Amazon ECR | Container image registry (gateway, auth, chat, agent, billing, litellm) |
+| Amazon ECS (Fargate) | Runs app services, LiteLLM, Redis |
 | Amazon S3 | Frontend static assets (via CloudFront) and generated agent files (`agent-files` bucket) |
 | Amazon CloudFront | CDN + HTTPS for the frontend; invalidation on deploy |
 | AWS Cloud Map | Private service discovery (`allverse.local`) |
 | IAM (ECS task role) | Grants S3 access to agent tasks without static credentials |
-| Amazon VPC / subnets / security groups | Network isolation (implied by ECS/EC2) |
+| Amazon VPC / subnets / security groups | Network isolation (implied by ECS) |
 
 ### CI/CD Pipeline Jobs
 
@@ -128,8 +129,8 @@ curl http://localhost:8003/health  # agent
 
 ## Volumes / Persistent Data
 
-Docker named volumes: `mongo-data`, `redis-data`, `qdrant-data`, `fastembed-cache`.
-AWS: EC2 EBS volumes for Redis, Qdrant (and MongoDB if not using Atlas). No EFS, no Ollama.
+Docker named volumes: `fastembed-cache`.
+AWS: Redis on Fargate (ephemeral). MongoDB via Atlas, Qdrant via Qdrant Cloud. LiteLLM on Fargate proxies to Groq. No EFS/EC2.
 
 ---
 

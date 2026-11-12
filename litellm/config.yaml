@@ -1,30 +1,30 @@
 model_list:
-  # ── Single Local Ollama Model (llama3.2:3b) ───────────────────────
-  # All agent roles route to this one installed model so the project
-  # works with a single Ollama download.
-  - model_name: llama3.2:3b
-    litellm_params:
-      model: ollama/llama3.2:3b
-      api_base: http://host.docker.internal:11434
-
-  # ── Generic Aliases (all mapped to llama3.2:3b) ───────────────────
+  # ── Groq-backed models (no local Ollama) ──────────────────────
   - model_name: allverse-chat
     litellm_params:
-      model: ollama/llama3.2:3b
-      api_base: http://host.docker.internal:11434
+      model: groq/openai/gpt-oss-120b
+      api_key: os.environ/GROQ_API_KEY
 
   - model_name: allverse-coding
     litellm_params:
-      model: ollama/llama3.2:3b
-      api_base: http://host.docker.internal:11434
+      model: groq/openai/gpt-oss-120b
+      api_key: os.environ/GROQ_API_KEY
 
   - model_name: allverse-vision
     litellm_params:
-      model: ollama/llama3.2:3b
-      api_base: http://host.docker.internal:11434
+      model: groq/qwen/qwen3.6-27b
+      api_key: os.environ/GROQ_API_KEY
+
+  - model_name: openai/gpt-oss-120b
+    litellm_params:
+      model: groq/openai/gpt-oss-120b
+      api_key: os.environ/GROQ_API_KEY
 
 router_settings:
   routing_strategy: "simple-shuffle"
+
+litellm_settings:
+  drop_params: true
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
