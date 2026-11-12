@@ -1,5 +1,145 @@
+# Backend-only compose (for Render / backend hosting)
+# Uses the single root .env file.
+
 services:
   redis:
-    image: redis
+    image: redis:7-alpine
+    restart: unless-stopped
     ports:
-      - 6379:6379
+      - "6379:6379"
+    networks:
+      - allverse-net
+
+  s3mock:
+    image: adobe/s3mock:latest
+    restart: unless-stopped
+    environment:
+      initialBuckets: agent-files
+    ports:
+      - "9000:9090"
+    networks:
+      - allverse-net
+
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    restart: unless-stopped
+    ports:
+      - "4001:4000"
+    volumes:
+      - ./litellm/config.yaml:/app/config.yaml
+    environment:
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY:-sk-allverse-litellm-master-key}
+    command: [ "--config", "/app/config.yaml", "--port", "4000", "--num_workers", "1" ]
+    networks:
+      - allverse-net
+
+  auth:
+    build:
+      context: ./backend
+      dockerfile: ./services/auth/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    env_file:
+      - ./.env
+    environment:
+      - PORT=8001
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+    networks:
+      - allverse-net
+
+  chat:
+    build:
+      context: ./backend
+      dockerfile: ./services/chat/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8002:8002"
+    env_file:
+      - ./.env
+    environment:
+      - PORT=8002
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+    networks:
+      - allverse-net
+
+  billing:
+    build:
+      context: ./backend
+      dockerfile: ./services/billing/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8004:8004"
+    env_file:
+      - ./.env
+    environment:
+      - PORT=8004
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+    networks:
+      - allverse-net
+
+  agent:
+    build:
+      context: ./backend/services/agent
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8003:8003"
+    env_file:
+      - ./.env
+    environment:
+      - PORT=8003
+      - LITELLM_URL=http://litellm:4000
+      - LITELLM_API_KEY=${LITELLM_MASTER_KEY:-sk-allverse-litellm-master-key}
+      - USE_LITELLM=true
+      - REDIS_URL=redis://redis:6379
+      - QDRANT_API_KEY=${QDRANT_API_KEY:-}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - TAVILY_API_KEY=${TAVILY_API_KEY:-}
+    volumes:
+      - fastembed-cache:/app/.cache/fastembed
+    depends_on:
+      - litellm
+      - redis
+      - s3mock
+    networks:
+      - allverse-net
+
+  gateway:
+    build:
+      context: ./backend
+      dockerfile: ./gateway/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./.env
+    environment:
+      - PORT=8000
+      - AUTH_SERVICE=http://auth:8001
+      - CHAT_SERVICE=http://chat:8002
+      - AGENT_SERVICE=http://agent:8003
+      - BILLING_SERVICE=http://billing:8004
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+      - auth
+      - chat
+      - billing
+      - agent
+    networks:
+      - allverse-net
+
+networks:
+  allverse-net:
+    driver: bridge
+
+volumes:
+  fastembed-cache:

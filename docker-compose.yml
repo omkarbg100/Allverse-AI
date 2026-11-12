@@ -46,7 +46,7 @@ services:
     ports:
       - "8001:8001"
     env_file:
-      - ./backend/services/auth/.env
+      - ./.env
     environment:
       - PORT=8001
       - REDIS_URL=redis://redis:6379
@@ -65,7 +65,7 @@ services:
     ports:
       - "8002:8002"
     env_file:
-      - ./backend/services/chat/.env
+      - ./.env
     environment:
       - PORT=8002
       - REDIS_URL=redis://redis:6379
@@ -83,7 +83,7 @@ services:
     ports:
       - "8004:8004"
     env_file:
-      - ./backend/services/billing/.env
+      - ./.env
     environment:
       - PORT=8004
       - REDIS_URL=redis://redis:6379
@@ -104,7 +104,7 @@ services:
     ports:
       - "8003:8003"
     env_file:
-      - ./backend/services/agent/.env
+      - ./.env
     environment:
       - PORT=8003
       - LITELLM_URL=http://litellm:4000
@@ -133,7 +133,7 @@ services:
     ports:
       - "8000:8000"
     env_file:
-      - ./backend/gateway/.env
+      - ./.env
     environment:
       - PORT=8000
       - FRONTEND_URL=http://localhost:5173

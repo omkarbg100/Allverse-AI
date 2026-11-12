@@ -1,6 +1,5 @@
 """
-LLM Model Factory — LiteLLM proxy primary (routes to Groq),
-with direct Groq fallback.
+LLM Model Factory — LiteLLM proxy (routes to Groq).
 
 Usage:
     llm = get_model("chat")
@@ -8,20 +7,14 @@ Usage:
 """
 
 import logging
-import httpx
-from langchain_groq import ChatGroq
+from langchain_openai import ChatOpenAI
 from .settings import settings
 
 logger = logging.getLogger(__name__)
 
-try:
-    from langchain_openai import ChatOpenAI
-except ImportError:
-    from langchain_community.chat_models import ChatOpenAI
-
 # ── Model name maps ────────────────────────────────────────────────
 
-GROQ_MODEL_MAP: dict[str, str] = {
+MODEL_MAP: dict[str, str] = {
     "router":         settings.GROQ_CHAT_MODEL,
     "chat":           settings.GROQ_CHAT_MODEL,
     "search":         settings.GROQ_CHAT_MODEL,
@@ -41,9 +34,10 @@ def _temperature(agent: str) -> float:
     return 0.2 if agent in STRUCTURED_AGENTS else 0.7
 
 
-def _build_litellm(agent: str):
-    """LiteLLM exposes standard OpenAI-compatible completions API (proxies to Groq)."""
-    model = GROQ_MODEL_MAP.get(agent, settings.GROQ_CHAT_MODEL)
+def get_model(agent: str):
+    """Returns a LangChain chat model backed by the LiteLLM gateway."""
+    model = MODEL_MAP.get(agent, settings.GROQ_CHAT_MODEL)
+    logger.debug("Using LiteLLM gateway for agent=%s model=%s", agent, model)
     return ChatOpenAI(
         model=model,
         base_url=f"{settings.LITELLM_URL}/v1",
@@ -51,40 +45,3 @@ def _build_litellm(agent: str):
         temperature=_temperature(agent),
         max_tokens=4096,
     )
-
-
-def _build_groq(agent: str):
-    if not settings.GROQ_API_KEY:
-        raise ValueError("GROQ_API_KEY not set — cannot use Groq fallback.")
-    model = GROQ_MODEL_MAP.get(agent, settings.GROQ_CHAT_MODEL)
-    return ChatGroq(
-        model=model,
-        api_key=settings.GROQ_API_KEY,
-        temperature=_temperature(agent),
-        max_tokens=4096,
-    )
-
-
-def get_model(agent: str):
-    """
-    Returns a LangChain chat model:
-      1. Tries LiteLLM gateway first (proxies to Groq)
-      2. Falls back to direct Groq if LiteLLM is unavailable
-    """
-    if settings.USE_LITELLM and settings.LITELLM_URL:
-        try:
-            resp = httpx.get(f"{settings.LITELLM_URL}/health/readiness", timeout=2)
-            if resp.status_code == 200:
-                logger.debug("Using LiteLLM gateway for agent=%s", agent)
-                return _build_litellm(agent)
-        except Exception:
-            try:
-                resp = httpx.get(f"{settings.LITELLM_URL}/health", timeout=2)
-                if resp.status_code == 200:
-                    logger.debug("Using LiteLLM gateway for agent=%s", agent)
-                    return _build_litellm(agent)
-            except Exception:
-                pass
-
-    logger.warning("LiteLLM unavailable, falling back to direct Groq for agent=%s", agent)
-    return _build_groq(agent)
