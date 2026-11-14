@@ -1,0 +1,27 @@
+name: allverse ai EC2 deployment
+
+on:
+  push:
+    branches: [EC2-deployment]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_PORT || 22 }}
+          script: |
+            set -e
+            cd /opt/allverse-ai
+            git pull --ff-only
+            docker compose -f docker-compose.yml -f docker-compose.ec2.yml build
+            docker compose -f docker-compose.yml -f docker-compose.ec2.yml up -d --remove-orphans
+            bash deploy/ec2/healthcheck.sh
