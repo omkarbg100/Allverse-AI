@@ -1,0 +1,15 @@
+[Unit]
+Description=Allverse AI Docker Compose Stack
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/allverse-ai
+ExecStart=/usr/bin/docker compose -f docker-compose.yml -f docker-compose.ec2.yml up -d --build
+ExecStop=/usr/bin/docker compose -f docker-compose.yml -f docker-compose.ec2.yml down
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target
