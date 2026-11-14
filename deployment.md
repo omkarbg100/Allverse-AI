@@ -140,3 +140,8 @@ AWS: Redis on Fargate (ephemeral). MongoDB via Atlas, Qdrant via Qdrant Cloud. L
 - Frontend dev server runs inside the container on port 5173.
 - Agent service runs Uvicorn on 8003.
 - S3 Mock runs on container port 9090 exposed as 9000.
+
+## Branches
+
+- `main`: ECS/production deployment.
+- `EC2-deployment`: single-host EC2 deployment assets.
