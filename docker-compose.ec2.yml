@@ -9,6 +9,11 @@ services:
   gateway:
     environment:
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost}
+  agent:
+    environment:
+      - S3_PUBLIC_ENDPOINT=${S3_PUBLIC_ENDPOINT:-http://localhost:9000}
+      - MINIO_ENDPOINT=http://s3mock:9090
+
   nginx:
     image: nginx:1.27-alpine
     container_name: allverse-nginx
