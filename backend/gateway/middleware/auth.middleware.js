@@ -7,7 +7,6 @@ const protect=async (req,res,next) => {
             return res.status(400).json({message:"unauthorized"})
         }
         const session=await redis.get(`session-${sessionId}`)
-        console.log(session)
         if(!session){
             return res.status(400).json({message:"session expired"})
         }
