@@ -30,6 +30,10 @@ app.get("/health",(req,res)=>{
     res.json({status:"ok",service:"gateway"})
 })
 
+app.use((req,res)=>{
+    res.status(404).json({message:"route not found"})
+})
+
 app.listen(port,()=>{
     console.log(`gateway started at ${port}`)
 })
