@@ -4,13 +4,17 @@ import connectDb from "./config/db.js"
 import router from "./routes/auth.route.js"
 dotenv.config()
 
-const port =process.env.PORT
+const port = process.env.PORT || 3001
 
 const app=express()
 app.use(express.json())
 app.use("/",router)
 app.get("/",(req,res)=>{
     res.json({message:"hello from auth"})
+})
+
+app.get("/health",(req,res)=>{
+    res.json({status:"ok",service:"auth"})
 })
 
 app.listen(port,()=>{
