@@ -8,7 +8,7 @@ import { getCurrentUser } from "./controllers/user.controller.js"
 import protect from "./middleware/auth.middleware.js"
 import { proxyWithHeader } from "./utils/proxyWithHeader.js"
 import morgan from "morgan"
-const port =process.env.PORT
+const port = process.env.PORT || 3000
 
 const app=express()
 app.use(cors({
@@ -24,6 +24,10 @@ app.use("/api/billing",protect,proxyWithHeader(process.env.BILLING_SERVICE))
 app.get("/api/me",protect,getCurrentUser)
 app.get("/",(req,res)=>{
     res.json({message:"hello from gateway v5"})
+})
+
+app.get("/health",(req,res)=>{
+    res.json({status:"ok",service:"gateway"})
 })
 
 app.listen(port,()=>{
